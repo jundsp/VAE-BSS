@@ -1,7 +1,5 @@
 # vae-bss
  
- Variational Auto-Encoding Unsupervised Blind Source Separation
-
  Authors: Julian Neri, Roland Badeau, Philippe Depalle
 
 <h3>Instructions</h3>
