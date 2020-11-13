@@ -39,11 +39,7 @@ def mix_data(data):
     sources = torch.cat([data[:n],data[n:2*n]],1) / 2.0
     data = sources.sum(1).unsqueeze(1)
     return data, sources
-
-def colorize(input):
-    temp = torch.from_numpy(cm_jet(input.detach())).permute(-1,0,1)[:3]
-    return temp
-
+    
 def vae_masks(mu_s, x):
     mu_sm = mu_s * (x / mu_s.sum(1).unsqueeze(1))
     mu_sm[torch.isnan(mu_sm)] = 0
@@ -118,11 +114,6 @@ for num_sources in range(2,5):
     s_ae = optimal_permute(s_ae,s_tru)
 
     # Save Results
-    cm_jet = plt.get_cmap('jet')
-    cmaplist = [cm_jet(i) for i in range(cm_jet.N)]
-    cmaplist[0] = (0.0,0.0,0.0,1.0)
-    cm_jet = matplotlib.colors.LinearSegmentedColormap.from_list('mcm',cmaplist, cm_jet.N)
-
     root = 'results/K'+str(num_sources)
     if os.path.exists(root):
         shutil.rmtree(root)
@@ -135,16 +126,16 @@ for num_sources in range(2,5):
             shutil.rmtree(dir)
         os.mkdir(dir)
 
-        save_image(colorize(x[i].squeeze()), os.path.join(dir,'mix' +'_gt.png'), normalize=False)
-        save_image(colorize(x_vae[i].squeeze()), os.path.join(dir,'mix' +'_vae.png'), normalize=False)
-        save_image(colorize(x_vaem[i].squeeze()), os.path.join(dir,'mix' +'_vaem.png'), normalize=False)
-        save_image(colorize(x_ae[i].squeeze()), os.path.join(dir,'mix' +'_ae.png'), normalize=False)
-        for j in range(2):
-        	save_image(colorize(s_tru[i,j].squeeze()), os.path.join(dir, 's' + str(j+1) +'_gt.png'), normalize=False)
-        for j in range(2):
-            save_image(colorize(s_vae[i,j].squeeze()), os.path.join(dir, 's' + str(j+1) +'_vae.png'), normalize=False)
-            save_image(colorize(s_vaem[i,j].squeeze()), os.path.join(dir, 's' + str(j+1) +'_vaem.png'), normalize=False)
-            save_image(colorize(s_ae[i,j].squeeze()), os.path.join(dir, 's' + str(j+1) +'_ae.png'), normalize=False)
+        nrows = 5
+        n = 2*nrows
+        togrid = torch.zeros(n,x.size(-2),x.size(-1))
+        togrid[0::nrows] = x[i]
+        togrid[1::nrows] = s_ae[i]
+        togrid[2::nrows] = s_vae[i]
+        togrid[3::nrows] = s_vaem[i]
+        togrid[4::nrows] = s_tru[i]
+        recon_grid = make_grid(togrid.detach().unsqueeze(1),nrow=nrows).cpu()
+        save_image(recon_grid,os.path.join(dir,'result.png'),padding=0)
 
 print('\nMixed and Separated images saved in "results" directory....')
 print('Evaluation complete.')
