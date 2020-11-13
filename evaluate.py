@@ -101,7 +101,7 @@ for num_sources in range(2,5):
     x_vae, mu_z, logvar_z, s_vae = model_vae(x)
     x_vae = x_vae.view(-1,1,28,28)
     s_vae = s_vae.view(-1,num_sources,28,28)
-    s_vae = optimal_perumute(s_vae,s_tru)
+    s_vae = optimal_permute(s_vae,s_tru)
 
     # Create masks
     s_vaem = vae_masks(s_vae,x)
