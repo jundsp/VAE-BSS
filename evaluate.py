@@ -111,7 +111,7 @@ for num_sources in range(2,5):
     x_ae, mu_z, logvar_z, s_ae = model_ae(x)
     x_ae = x_ae.view(-1,1,28,28)
     s_ae = s_ae.view(-1,num_sources,28,28)
-    s_ae = optimal_perumute(s_ae,s_tru)
+    s_ae = optimal_permute(s_ae,s_tru)
 
     # Save Results
     cm_jet = plt.get_cmap('jet')
