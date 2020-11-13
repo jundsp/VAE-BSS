@@ -12,3 +12,5 @@ pip3 install scipy
 
 echo "Running Python script"
 python evaluate.py
+
+echo "Done!"
