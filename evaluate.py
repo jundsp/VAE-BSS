@@ -12,6 +12,7 @@ import os
 import shutil
 from model import *
 import argparse
+from scipy.optimize import linear_sum_assignment
 
 parser = argparse.ArgumentParser(description='VAE-BSS')
 parser.add_argument('--batch-size', type=int, default=64, metavar='N',
@@ -47,6 +48,21 @@ def vae_masks(mu_s, x):
     mu_sm = mu_s * (x / mu_s.sum(1).unsqueeze(1))
     mu_sm[torch.isnan(mu_sm)] = 0
     return mu_sm
+
+# Optimal permutation based on MSE, with the Hungarian Algorithm (Assignment Problem)
+def optimal_permute(y,x):
+	n = x.size(0)
+	nx = x.size(1)
+	ny = y.size(1)
+	z = torch.zeros_like(x)
+	for i in range(n):
+		cost = torch.zeros(ny,nx)
+		for j in range(ny):
+			cost[j] = (y[i,j].unsqueeze(0) - x[i,:]).pow(2).sum(-1).sum(-1)
+
+		row_ind, col_ind = linear_sum_assignment(cost.detach().numpy().T)
+		z[i] = y[i,col_ind]
+	return z
 
 args = parser.parse_args()
 torch.manual_seed(args.seed)
@@ -85,6 +101,8 @@ for num_sources in range(2,5):
     x_vae, mu_z, logvar_z, s_vae = model_vae(x)
     x_vae = x_vae.view(-1,1,28,28)
     s_vae = s_vae.view(-1,num_sources,28,28)
+    s_vae = optimal_perumute(s_vae,s_tru)
+
     # Create masks
     s_vaem = vae_masks(s_vae,x)
     x_vaem = s_vaem.sum(1).unsqueeze(1)
@@ -93,6 +111,7 @@ for num_sources in range(2,5):
     x_ae, mu_z, logvar_z, s_ae = model_ae(x)
     x_ae = x_ae.view(-1,1,28,28)
     s_ae = s_ae.view(-1,num_sources,28,28)
+    s_ae = optimal_perumute(s_ae,s_tru)
 
     # Save Results
     cm_jet = plt.get_cmap('jet')
@@ -118,7 +137,7 @@ for num_sources in range(2,5):
         save_image(colorize(x_ae[i].squeeze()), os.path.join(dir,'mix' +'_ae.png'), normalize=False)
         for j in range(2):
         	save_image(colorize(s_tru[i,j].squeeze()), os.path.join(dir, 's' + str(j+1) +'_gt.png'), normalize=False)
-        for j in range(num_sources):
+        for j in range(2):
             save_image(colorize(s_vae[i,j].squeeze()), os.path.join(dir, 's' + str(j+1) +'_vae.png'), normalize=False)
             save_image(colorize(s_vaem[i,j].squeeze()), os.path.join(dir, 's' + str(j+1) +'_vaem.png'), normalize=False)
             save_image(colorize(s_ae[i,j].squeeze()), os.path.join(dir, 's' + str(j+1) +'_ae.png'), normalize=False)
