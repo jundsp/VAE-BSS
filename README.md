@@ -12,4 +12,4 @@
 A virtual environment will be created in the directory 'env'. Required packages are then installed and 'evaluate.py' is run.
 MNIST data will be downloaded and mixed.
 Pre-trained (unsupervised) VAE and AE models then separate the mixed data.
-Results for K = 2, 3, 4 assume sources are saved in the results directory.
+Results for K = 2, 3, 4 assumed sources are saved in the results directory.
