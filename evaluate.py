@@ -66,7 +66,7 @@ data, numbers = next(iter(test_loader))
 x,s_tru = mix_data(data.to(device))
 
 dimx = int(28*28)
-for num_sources in range(2,4):
+for num_sources in range(2,5):
     model = VAE(dimx=dimx,dimz=args.dimz,n_sources=num_sources,device=device)
     loss_function = Loss(sources=num_sources,likelihood='laplace')
     model.to(device)
