@@ -21,8 +21,8 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='enables CUDA training')
 parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
-parser.add_argument('--data-directory', type=str, default='/Users/julian/Documents/Code/Compute_Canada/data', metavar='fname',
-                    help='Folder containing the spectrogram data')
+parser.add_argument('--data-directory', type=str, default='data', metavar='fname',
+                    help='Folder containing the data')
 parser.add_argument('--sources', type=int, default=2,
                     help='Number of sources to infer')
 parser.add_argument('--dimz', type=int, default=20,
@@ -79,13 +79,17 @@ test_loader = torch.utils.data.DataLoader(
 
 dimx = int(28*28)
 
+print('Loading MNIST Test Data Batch')
 # Load MNIST Test Data
 data, numbers = next(iter(test_loader))
 # Randomly mix
 x, s_tru = mix_data(data.to(device))
 
+
+print('Evaluating mixture with K = 2, 3, and 4 assumed sources.')
 # Evaluate for K = 2, 3, 4 model sources
 for num_sources in range(2,5):
+    print('K = ' + str(num_sources))
 
     # Load the Trained VAE Model
     model_vae = VAE(dimx=dimx,dimz=args.dimz,n_sources=num_sources,device=device).to(device)
@@ -141,3 +145,6 @@ for num_sources in range(2,5):
             save_image(colorize(s_vae[i,j].squeeze()), os.path.join(dir, 's' + str(j+1) +'_vae.png'), normalize=False)
             save_image(colorize(s_vaem[i,j].squeeze()), os.path.join(dir, 's' + str(j+1) +'_vaem.png'), normalize=False)
             save_image(colorize(s_ae[i,j].squeeze()), os.path.join(dir, 's' + str(j+1) +'_ae.png'), normalize=False)
+
+print('Separated images saved in "results" directory.')
+print('Evaluation complete.')
