@@ -61,29 +61,40 @@ test_loader = torch.utils.data.DataLoader(
     datasets.MNIST(args.data_directory, train=False, transform=transforms.ToTensor()),
     batch_size=args.batch_size, shuffle=False, **kwargs)
 
-# Transition between latent spaces
-data, numbers = next(iter(test_loader))
-x,s_tru = mix_data(data.to(device))
-
 dimx = int(28*28)
+
+# Load MNIST Test Data
+data, numbers = next(iter(test_loader))
+# Randomly mix
+x, s_tru = mix_data(data.to(device))
+
+# Evaluate for K = 2, 3, 4 model sources
 for num_sources in range(2,5):
-    model = VAE(dimx=dimx,dimz=args.dimz,n_sources=num_sources,device=device)
-    loss_function = Loss(sources=num_sources,likelihood='laplace')
-    model.to(device)
 
-    model.load_state_dict(torch.load('saves/model_K' + str(num_sources) + '.pt',map_location=torch.device('cpu')))
-    model.eval()
+    # Load the Trained VAE Model
+    model_vae = VAE(dimx=dimx,dimz=args.dimz,n_sources=num_sources,device=device).to(device)
+    model_vae.load_state_dict(torch.load('saves/model_vae_K' + str(num_sources) + '.pt',map_location=torch.device('cpu')))
+    model_vae.eval()
 
-    mu_x, mu_z, logvar_z, mu_s = model(x)
+    # Load the Trained AE Model (latent sampling is deterministic, trained without KLD)
+    model_ae = VAE(dimx=dimx,dimz=args.dimz,n_sources=num_sources,device=device,samples=0).to(device)
+    model_ae.load_state_dict(torch.load('saves/model_ae_K' + str(num_sources) + '.pt',map_location=torch.device('cpu')))
+    model_ae.eval()
 
-    mu_x = mu_x.view(-1,1,28,28)
-    mu_s = mu_s.view(-1,num_sources,28,28)
-
+    # VAE Evaluation
+    x_vae, mu_z, logvar_z, s_vae = model_vae(x)
+    x_vae = x_vae.view(-1,1,28,28)
+    s_vae = s_vae.view(-1,num_sources,28,28)
     # Create masks
-    mu_sm = vae_masks(mu_s,x)
-    mu_xm = mu_sm.sum(1).unsqueeze(1)
+    s_vaem = vae_masks(s_vae,x)
+    x_vaem = s_vaem.sum(1).unsqueeze(1)
 
-    # Plots
+    # AE Evaluation
+    x_ae, mu_z, logvar_z, s_ae = model_ae(x)
+    x_ae = x_ae.view(-1,1,28,28)
+    s_ae = s_ae.view(-1,num_sources,28,28)
+
+    # Save Results
     cm_jet = plt.get_cmap('jet')
     cmaplist = [cm_jet(i) for i in range(cm_jet.N)]
     cmaplist[0] = (0.0,0.0,0.0,1.0)
@@ -94,18 +105,20 @@ for num_sources in range(2,5):
         shutil.rmtree(root)
     os.mkdir(root)
 
-    examples = 10
-    jv = torch.randperm(x.size(0))[:examples]
-    for v, i in enumerate(jv):
-        dir = os.path.join(root,'Example_' + str(v+1))
+    n = 10
+    for i in range(n):
+        dir = os.path.join(root,'Example_' + str(i+1))
         if os.path.exists(dir):
             shutil.rmtree(dir)
         os.mkdir(dir)
-        save_image(colorize(mu_x[i].squeeze()), os.path.join(dir,'mix' +'_vae.png'), normalize=False)
-        save_image(colorize(mu_xm[i].squeeze()), os.path.join(dir,'mix' +'_vaem.png'), normalize=False)
+
         save_image(colorize(x[i].squeeze()), os.path.join(dir,'mix' +'_gt.png'), normalize=False)
+        save_image(colorize(x_vae[i].squeeze()), os.path.join(dir,'mix' +'_vae.png'), normalize=False)
+        save_image(colorize(x_vaem[i].squeeze()), os.path.join(dir,'mix' +'_vaem.png'), normalize=False)
+        save_image(colorize(x_ae[i].squeeze()), os.path.join(dir,'mix' +'_ae.png'), normalize=False)
         for j in range(2):
         	save_image(colorize(s_tru[i,j].squeeze()), os.path.join(dir, 's' + str(j+1) +'_gt.png'), normalize=False)
         for j in range(num_sources):
-            save_image(colorize(mu_s[i,j].squeeze()), os.path.join(dir, 's' + str(j+1) +'_vae.png'), normalize=False)
-            save_image(colorize(mu_sm[i,j].squeeze()), os.path.join(dir, 's' + str(j+1) +'_vaem.png'), normalize=False)
+            save_image(colorize(s_vae[i,j].squeeze()), os.path.join(dir, 's' + str(j+1) +'_vae.png'), normalize=False)
+            save_image(colorize(s_vaem[i,j].squeeze()), os.path.join(dir, 's' + str(j+1) +'_vaem.png'), normalize=False)
+            save_image(colorize(s_ae[i,j].squeeze()), os.path.join(dir, 's' + str(j+1) +'_ae.png'), normalize=False)
