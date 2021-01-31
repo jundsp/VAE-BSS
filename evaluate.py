@@ -83,6 +83,9 @@ x, s_tru = mix_data(data.to(device))
 
 
 print('Evaluating mixtures with K = 2, 3, and 4 assumed sources:')
+if os.path.exists('results'):
+    shutil.rmtree('results')
+os.mkdir('results')
 # Evaluate for K = 2, 3, 4 model sources
 for num_sources in range(2,5):
     print('\tK = ' + str(num_sources))
