@@ -101,9 +101,9 @@ class Loss(nn.Module):
         self.prior = prior
         self.scale = scale
 
-        if likelihood is 'gauss':
+        if likelihood == 'gauss':
             self.criterion = nn.MSELoss(reduction='sum')
-        elif likelihood is 'laplace':
+        elif likelihood == 'laplace':
             self.criterion = LaplaceLoss()
         else:
             self.criterion = nn.BCELoss(reduction='sum')
