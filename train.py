@@ -9,20 +9,7 @@ from torchvision.utils import save_image, make_grid
 import matplotlib.pyplot as plt
 from model import *
 from argparser import *
-
-def plot_losses(losses):
-	plt.figure()
-	plt.plot(np.array(range(1,args.epochs+1)),losses["train"][:,0].view(-1),label="Train")
-	plt.plot(np.array(range(1,args.epochs+1)),losses["test"][:,0].view(-1),label="Test")
-	plt.xlabel('Epoch'), plt.ylabel('Loss'), plt.legend(), plt.xlim(1,args.epochs)
-	plt.savefig('results/losses.png')
-	plt.close()
-
-def RandomMix(data):
-    n = data.size(0)//2
-    sources = torch.stack([data[:n],data[n:2*n]],1) / 2.0
-    data = sources.sum(1)
-    return data, sources
+from utils import *
 
 def train(epoch):
 
@@ -30,7 +17,7 @@ def train(epoch):
     train_losses = torch.zeros(3)
 
     for batch_idx, (data,_) in enumerate(train_loader):
-        data = RandomMix(data.to(device))[0].view(-1,dimx)
+        data = mix_data(data.to(device))[0].view(-1,dimx)
 
         optimizer.zero_grad()
         recon_y, mu_z, logvar_z, _ = model(data)
@@ -62,7 +49,7 @@ def test(epoch):
 
     with torch.no_grad():
         for i, (data,_) in enumerate(test_loader):
-            data = RandomMix(data.to(device))[0].view(-1,dimx)
+            data = mix_data(data.to(device))[0].view(-1,dimx)
 
             recon_y, mu_z, logvar_z, recons = model(data)
             loss, ELL, KLD = loss_function(data,recon_y, mu_z, logvar_z, beta=beta)
@@ -88,6 +75,16 @@ def test(epoch):
 
     return test_losses
 
+def plot_losses(losses):
+	plt.figure()
+	plt.plot(np.array(range(1,args.epochs+1)),losses["train"][:,0].view(-1),label="Train")
+	plt.plot(np.array(range(1,args.epochs+1)),losses["test"][:,0].view(-1),label="Test")
+	plt.xlabel('Epoch'), plt.ylabel('Loss'), plt.legend(), plt.xlim(1,args.epochs)
+	plt.savefig('results/losses.png')
+	plt.close()
+
+
+
 args = parser.parse_args()
 torch.manual_seed(args.seed)
 args.cuda = not args.no_cuda and torch.cuda.is_available()
@@ -102,7 +99,6 @@ test_loader = torch.utils.data.DataLoader(
     datasets.MNIST(args.data_directory, train=False, transform=transforms.ToTensor()),
     batch_size=args.batch_size, shuffle=True, **kwargs)
 
-
 # MNIST is 28 X 28
 dimx = int(28*28)
 
@@ -115,8 +111,8 @@ scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=args.decay, 
 losses = {"train": torch.zeros(args.epochs,3), "test": torch.zeros(args.epochs,3)}
 
 for epoch in range(1, args.epochs+1):
-    beta = min(args.beta_max,(epoch)/min(args.epochs,args.warm_up))
-    
+    beta = min(1.0,(epoch)/min(args.epochs,args.warm_up)) * args.beta_max
+
     losses["train"][epoch-1] = train(epoch)
     losses["test"][epoch-1] = test(epoch)
 

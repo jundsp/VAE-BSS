@@ -7,39 +7,12 @@ from torchvision.utils import save_image, make_grid
 import matplotlib.pyplot as plt
 import matplotlib.colors
 import numpy as np
-from scipy.optimize import linear_sum_assignment
 import os
 import shutil
 from model import *
 from argparser import *
-
-
-def mix_data(data):
-    n = data.size(0)//2
-    sources = torch.cat([data[:n],data[n:2*n]],1) / 2.0
-    data = sources.sum(1).unsqueeze(1)
-    return data, sources
+from utils import *
     
-def vae_masks(mu_s, x):
-    mu_sm = mu_s * (x / mu_s.sum(1).unsqueeze(1))
-    mu_sm[torch.isnan(mu_sm)] = 0
-    return mu_sm
-
-# Optimal permutation based on MSE, with the Hungarian Algorithm (Assignment Problem)
-def optimal_permute(y,x):
-	n = x.size(0)
-	nx = x.size(1)
-	ny = y.size(1)
-	z = torch.zeros_like(x)
-	for i in range(n):
-		cost = torch.zeros(ny,nx)
-		for j in range(ny):
-			cost[j] = (y[i,j].unsqueeze(0) - x[i,:]).pow(2).sum(-1).sum(-1)
-
-		row_ind, col_ind = linear_sum_assignment(cost.detach().numpy().T)
-		z[i] = y[i,col_ind]
-	return z
-
 args = parser.parse_args()
 torch.manual_seed(args.seed)
 args.cuda = not args.no_cuda and torch.cuda.is_available()
@@ -49,6 +22,7 @@ kwargs = {'num_workers': args.num_workers, 'pin_memory': True} if args.cuda else
 train_loader = torch.utils.data.DataLoader(
     datasets.MNIST(args.data_directory, train=True, download=True, transform=transforms.ToTensor()),
     batch_size=args.batch_size, shuffle=True, **kwargs)
+
 test_loader = torch.utils.data.DataLoader(
     datasets.MNIST(args.data_directory, train=False, transform=transforms.ToTensor()),
     batch_size=args.batch_size, shuffle=False, **kwargs)
@@ -60,7 +34,6 @@ print('\nLoading and randomly mixing pairs of MNIST test data images.')
 data, numbers = next(iter(test_loader))
 # Randomly mix
 x, s_tru = mix_data(data.to(device))
-
 
 print('Evaluating mixtures with K = 2, 3, and 4 assumed sources:')
 if os.path.exists('results'):
