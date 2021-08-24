@@ -1,4 +1,3 @@
-from __future__ import print_function
 import torch
 from torch import nn, optim
 from torch.nn import functional as F
@@ -8,31 +7,12 @@ from torchvision.utils import save_image, make_grid
 import matplotlib.pyplot as plt
 import matplotlib.colors
 import numpy as np
+from scipy.optimize import linear_sum_assignment
 import os
 import shutil
 from model import *
-import argparse
-from scipy.optimize import linear_sum_assignment
+from argparser import *
 
-parser = argparse.ArgumentParser(description='VAE-BSS')
-parser.add_argument('--batch-size', type=int, default=64, metavar='N',
-                    help='input batch size for training (default: 128)')
-parser.add_argument('--no-cuda', action='store_true', default=False,
-                    help='enables CUDA training')
-parser.add_argument('--seed', type=int, default=1, metavar='S',
-                    help='random seed (default: 1)')
-parser.add_argument('--data-directory', type=str, default='data', metavar='fname',
-                    help='Folder containing the data')
-parser.add_argument('--sources', type=int, default=2,
-                    help='Number of sources to infer')
-parser.add_argument('--dimz', type=int, default=20,
-                    help='Dimension of latent space.')
-parser.add_argument('--num-workers', type=int, default=4,
-                    help='Number of data loading workers (parallel).')
-parser.add_argument('--prior', type=str, default='laplace',
-                    help='Prior over latent variables')
-parser.add_argument('--samples', type=int, default=1,
-                    help='Latent samples.')
 
 def mix_data(data):
     n = data.size(0)//2
@@ -91,13 +71,13 @@ for num_sources in range(2,5):
     print('\tK = ' + str(num_sources))
 
     # Load the Trained VAE Model
-    model_vae = VAE(dimx=dimx,dimz=args.dimz,n_sources=num_sources,device=device).to(device)
-    model_vae.load_state_dict(torch.load('saves/model_vae_K' + str(num_sources) + '.pt',map_location=torch.device('cpu')))
+    model_vae = VAE(dimx=dimx,dimz=args.dimz,n_sources=num_sources,device=device,variational=True).to(device)
+    model_vae.load_state_dict(torch.load('pretrained/model_vae_K' + str(num_sources) + '.pt',map_location=torch.device('cpu')))
     model_vae.eval()
 
     # Load the Trained AE Model (latent sampling is deterministic, trained without KLD)
-    model_ae = VAE(dimx=dimx,dimz=args.dimz,n_sources=num_sources,device=device,samples=0).to(device)
-    model_ae.load_state_dict(torch.load('saves/model_ae_K' + str(num_sources) + '.pt',map_location=torch.device('cpu')))
+    model_ae = VAE(dimx=dimx,dimz=args.dimz,n_sources=num_sources,device=device,variational=False).to(device)
+    model_ae.load_state_dict(torch.load('pretrained/model_ae_K' + str(num_sources) + '.pt',map_location=torch.device('cpu')))
     model_ae.eval()
 
     # VAE Evaluation
@@ -138,6 +118,7 @@ for num_sources in range(2,5):
         togrid[3::nrows] = s_vaem[i]
         togrid[4::nrows] = s_tru[i]
         recon_grid = make_grid(togrid.detach().unsqueeze(1),nrow=nrows).cpu()
+        # Todo: Save after plotting matplotlib, title the columns
         save_image(recon_grid,os.path.join(dir,'result.png'),padding=0)
 
 print('\nMixed and Separated images saved in "results" directory....')

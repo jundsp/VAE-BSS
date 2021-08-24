@@ -1,10 +1,26 @@
-from __future__ import print_function
 import torch
 import torch.utils.data
 from torch import nn, optim
 from torch.nn import functional as F
 import numpy as np
 
+# KL(q(x)||p(x)) where p(x) is Gaussian, q(x) is Gaussian
+def KLD_gauss(mu,logvar):
+    KLD = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+    return KLD
+
+# KL(q(x)||p(x)) where p(x) is Laplace, q(x) is Gaussian
+def KLD_laplace(mu,logvar,scale=1.0):
+    v = logvar.exp()
+    y = mu/torch.sqrt(2*v)
+    y2 = y.pow(2)
+    t1 = -2*torch.exp(-y2)*torch.sqrt(2*v/np.pi)
+    t2 = -2*mu*torch.erf(y)
+    t3 = scale*torch.log(np.pi*v/(2.0*scale*scale))
+    temp = scale+t1+t2+t3
+    KLD = -1.0/(2*scale)*torch.sum(1+t1+t2+t3)
+    return KLD
+    
 class LinearBlock(nn.Module):
     def __init__(self, in_channels,out_channels,activation=True):
         super(LinearBlock, self).__init__()
@@ -23,14 +39,14 @@ class LinearBlock(nn.Module):
         return self.block(x)
 
 class VAE(nn.Module):
-    def __init__(self, dimx, dimz, n_sources=1,device='cpu',samples=1):
+    def __init__(self, dimx, dimz, n_sources=1,device='cpu',variational=True):
         super(VAE, self).__init__()
 
         self.dimx = dimx
         self.dimz = dimz
         self.n_sources = n_sources
         self.device = device
-        self.samples = samples
+        self.variational = variational
 
         chans = (700, 600, 500, 400, 300)
 
@@ -75,11 +91,11 @@ class VAE(nn.Module):
 
     def forward(self, x):
         mu, logvar = self.encode(x.view(-1, self.dimx))
-        z = self.reparameterize(mu, logvar)
-        if self.samples == 0:
-            recon_x, recons = self.decode(mu)
-        else:
+        if self.variational is True:
+            z = self.reparameterize(mu, logvar)
             recon_x, recons = self.decode(z)
+        else:
+            recon_x, recons = self.decode(mu)
         return recon_x, mu, logvar, recons
 
 class LaplaceLoss(nn.Module):
@@ -95,9 +111,9 @@ class LaplaceLoss(nn.Module):
         return torch.sum((target-estimate).abs() / self.scale)
 
 class Loss(nn.Module):
-    def __init__(self, sources=2, alpha=None, likelihood='bernoulli',samples=1,prior='gauss',scale=1.0):
+    def __init__(self, sources=2, alpha=None, likelihood='bernoulli',variational=True,prior='gauss',scale=1.0):
         super(Loss, self).__init__()
-        self.samples = samples
+        self.variational = variational
         self.prior = prior
         self.scale = scale
 
@@ -115,12 +131,13 @@ class Loss(nn.Module):
 
     def forward(self, x, recon_x, mu, logvar, beta=1):
         ELL = self.criterion(recon_x, x.view(-1,recon_x.size(-1)))
-        if self.prior == 'laplace':
-            KLD = KLD_laplace(mu,logvar,scale=self.scale)
-        else:
-            KLD = KLD_gauss(mu,logvar)
+
+        KLD = 0.0
+        if self.variational is True:
+            if self.prior == 'laplace':
+                KLD = KLD_laplace(mu,logvar,scale=self.scale)
+            else:
+                KLD = KLD_gauss(mu,logvar)
         
-        if self.samples == 0:
-            KLD *= 0.0
         loss = ELL + beta*KLD
         return loss, ELL,  KLD
