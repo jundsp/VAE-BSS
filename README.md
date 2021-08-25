@@ -32,6 +32,7 @@ The number of epochs for training / testing is defined in `argparser.py`. The ot
 
 Either program will first download the MNIST data and prepare it as training and testing datasets. The datasets are saved in a directory that will be recalled for subsequent use.
 
+### 
 The VAEs, with or without masking, perform high quality separation without knowing the true number of source images in the mixture and without ever having access to the true ground truth source images. 
 
 *The larger dataset of audio spectrograms and the models for separating their mixtures will be made available on my website.*
