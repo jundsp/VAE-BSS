@@ -3,7 +3,7 @@ import torch.utils.data
 from torch import nn, optim
 from torch.nn import functional as F
 import numpy as np
-from utils import *
+from .utils import *
     
 class LinearBlock(nn.Module):
     def __init__(self, in_channels,out_channels,activation=True):

@@ -4,8 +4,6 @@ from torch.nn import functional as F
 import torchvision
 from torchvision import datasets, transforms
 from torchvision.utils import save_image, make_grid
-import matplotlib.pyplot as plt
-import matplotlib.colors
 import numpy as np
 import os
 import shutil
