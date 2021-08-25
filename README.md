@@ -8,7 +8,7 @@ Includes pre-trained models located in `saves/pretrained` (~80mb total).
 
 Author: Julian Neri
 
-![VAE model for unsupervised source separation.](https://www.music.mcgill.ca/~julian/wp-content/uploads/2021/03/mnist_examples3_4.png)
+![VAE model for unsupervised source separation.](https://www.music.mcgill.ca/~julian/mnist_examples3_4/)
 
 
 ## Instructions
