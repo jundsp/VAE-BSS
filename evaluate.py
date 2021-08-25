@@ -9,9 +9,9 @@ import matplotlib.colors
 import numpy as np
 import os
 import shutil
-from model import *
-from argparser import *
-from utils import *
+from src.model import *
+from src.argparser import *
+from src.utils import *
     
 args = parser.parse_args()
 torch.manual_seed(args.seed)

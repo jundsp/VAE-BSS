@@ -7,9 +7,9 @@ import torchvision
 from torchvision import datasets, transforms
 from torchvision.utils import save_image, make_grid
 import matplotlib.pyplot as plt
-from model import *
-from argparser import *
-from utils import *
+from src.model import *
+from src.argparser import *
+from src.utils import *
 
 def train(epoch):
 
