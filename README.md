@@ -28,7 +28,7 @@ Results for K = 2, 3, 4 assumed model sources are saved in the results directory
 **`train.py`** starts from scratch and trains a VAE model solely on data mixtures in an unsupervised way. It demonstrates the training procedure described in our paper.
 The number of epochs for training / testing is defined in `argparser.py`. The other arguments defined in that file allow you to try different hyperparameters and settings for model training / specification, such as the dimension of the latent space, the prior probability, and the batch size.
 
-Either program will first download the MNIST data and prepare it as training and testing datasets. Note that it will only do this once, as the datasets will be saved in a directory that will be recalled for subsequent use.
+Either program will first download the MNIST data and prepare it as training and testing datasets. The datasets are saved in a directory that will be recalled for subsequent use.
 
 *The dataset of audio spectrograms and the larger model for separating their mixtures will be available here soon.*
 
