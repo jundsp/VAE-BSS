@@ -22,10 +22,12 @@ This can be done manually or with the following steps:
 Run either the `evaluate.py` or `train.py` files.
 * For example, enter this command in terminal: `python3 evaluate.py`
 
-**`evaluate.py`** uses a pre-trained (unsupervised) variational auto-encoder to separate the mixed MNIST handwritten digit images.
-Results for K = 2, 3, 4 assumed sources are saved in the results directory.
+**`evaluate.py`** uses models that we pre-trained in an unsupervised way to separate mixed MNIST handwritten digit images.
+Results for K = 2, 3, 4 assumed model sources are saved in the results directory. The models include normal auto-encoders, variational auto-encoders, and the VAE with masking, to show their qualities. 
 
-**`train.py`** trains a VAE model on MNIST data, demonstrating the training procedure described in our paper.
+VAE and VAE with masking performs excellently, providing high quality separation without knowing the true number of source images in the mixture and without ever having access to the true ground truth source images. 
+
+**`train.py`** starts from scratch and trains a VAE model solely on data mixtures in an unsupervised way. It demonstrates the training procedure described in our paper.
 The number of epochs for training / testing is defined in "argparser.py". The other arguments defined in that file allow you to try different hyperparameters and settings for model training / specification, such as the dimension of the latent space, the prior probability, and the batch size.
 
 Either program will first download the MNIST data and prepare it as training and testing data sets. Note that it will only do this once, as the datset will be saved in a directory that will be recalled for subsequent use.
