@@ -30,3 +30,5 @@ The number of epochs for training / testing is defined in "argparser.py". The ot
 
 Either program will first download the MNIST data and prepare it as training and testing data sets. Note that it will only do this once, as the datset will be saved in a directory that will be recalled for subsequent use.
 
+*The dataset of audio spectrograms and the larger model for separating their mixtures will be available here soon.*
+
