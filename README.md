@@ -1,4 +1,4 @@
-# vae-bss
+# VAE-BSS
   
 A PyTorch model of the variational auto-encoder for unsupervised blind source separation, with training and evaluation programs, as described in
 
@@ -11,7 +11,7 @@ A PyTorch model of the variational auto-encoder for unsupervised blind source se
 ### Installation
 
 Install the python packages listed in the "requirements.txt" file in the main directory of this repository.
-You can do so by executing the following command:
+This can be done manually or with the following steps:
 
 1. Open the unix shell (terminal for mac users)
 2. Change working directory to 'vae-bss-master'
