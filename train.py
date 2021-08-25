@@ -121,7 +121,7 @@ for epoch in range(1, args.epochs+1):
 
     with torch.no_grad():
         if epoch % args.save_interval == 0:
-            torch.save(model.state_dict(),'saves/model_vae_K' + str(args.sources) +  '.pt')
+            torch.save(model.state_dict(),'saves/model_'+('vae' if args.variational else 'ae')+'_K' + str(args.sources) +  '.pt')
 
 
 plot_losses(losses)

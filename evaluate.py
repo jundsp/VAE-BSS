@@ -45,12 +45,12 @@ for num_sources in range(2,5):
 
     # Load the Trained VAE Model
     model_vae = VAE(dimx=dimx,dimz=args.dimz,n_sources=num_sources,device=device,variational=True).to(device)
-    model_vae.load_state_dict(torch.load('pretrained/model_vae_K' + str(num_sources) + '.pt',map_location=torch.device('cpu')))
+    model_vae.load_state_dict(torch.load('saves/pretrained/model_vae_K' + str(num_sources) + '.pt',map_location=torch.device('cpu')))
     model_vae.eval()
 
     # Load the Trained AE Model (latent sampling is deterministic, trained without KLD)
     model_ae = VAE(dimx=dimx,dimz=args.dimz,n_sources=num_sources,device=device,variational=False).to(device)
-    model_ae.load_state_dict(torch.load('pretrained/model_ae_K' + str(num_sources) + '.pt',map_location=torch.device('cpu')))
+    model_ae.load_state_dict(torch.load('saves/pretrained/model_ae_K' + str(num_sources) + '.pt',map_location=torch.device('cpu')))
     model_ae.eval()
 
     # VAE Evaluation
