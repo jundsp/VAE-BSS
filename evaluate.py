@@ -10,6 +10,7 @@ import shutil
 from src.model import *
 from src.argparser import *
 from src.utils import *
+from src.dataloader import *
     
 args = parser.parse_args()
 torch.manual_seed(args.seed)
@@ -17,13 +18,7 @@ args.cuda = not args.no_cuda and torch.cuda.is_available()
 device = torch.device("cuda" if args.cuda else "cpu")
 kwargs = {'num_workers': args.num_workers, 'pin_memory': True} if args.cuda else {}
 
-train_loader = torch.utils.data.DataLoader(
-    datasets.MNIST(args.data_directory, train=True, download=True, transform=transforms.ToTensor()),
-    batch_size=args.batch_size, shuffle=True, **kwargs)
-
-test_loader = torch.utils.data.DataLoader(
-    datasets.MNIST(args.data_directory, train=False, transform=transforms.ToTensor()),
-    batch_size=args.batch_size, shuffle=False, **kwargs)
+train_loader, test_loader = get_data_loaders(args.data_directory,args.batch_size,kwargs)
 
 dimx = int(28*28)
 

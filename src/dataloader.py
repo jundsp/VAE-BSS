@@ -3,7 +3,7 @@ import torch.utils.data
 from torchvision import datasets, transforms
 
 
-def get_data_loaders(directory,batch_size=64):
+def get_data_loaders(directory,batch_size,kwargs):
     train_set = datasets.MNIST(directory, train=True, download=True, transform=transforms.ToTensor())
     test_set = datasets.MNIST(directory, train=False, download=True, transform=transforms.ToTensor())
 
