@@ -4,6 +4,8 @@ A PyTorch model of the variational auto-encoder for unsupervised blind source se
 
 * J. Neri, R. Badeau, P. Depalle, “[**Unsupervised Blind Source Separation with Variational Auto-Encoders**](https://www.music.mcgill.ca/~julian/wp-content/uploads/2021/06/2021_eusipco_vae_bss_neri.pdf)”, 29th European Signal Processing Conference (EUSIPCO), Dublin, Ireland, August 2021.
 
+Includes pre-trained models located in `saves/pretrained` (~80mb total).
+
  Author: Julian Neri
 
 ## Instructions
