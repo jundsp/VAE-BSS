@@ -34,7 +34,8 @@ Results for K = 2, 3, 4 assumed model sources are saved in the results directory
 Either program will first download the MNIST data and prepare it as training and testing datasets. The datasets are saved in a directory that will be recalled for subsequent use.
 
 ### Model Diagram
-![Diagram](docs/imgs/vae-bss-diagram.png?raw=true "Diagram")
+<img src="docs/imgs/vae-bss-diagram.png" alt="Diagram"
+	title="Diagram" width="150" />
 
 ### Separation of Image Mixtures
 
