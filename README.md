@@ -38,4 +38,4 @@ Either program will first download the MNIST data and prepare it as training and
 
 ### Separation of Image Mixtures
 
-<img src="docs/imgs/MNIST_K3_25.png" alt="MNIST K=3" title="MNIST K=3" width="80%" />
+<img src="docs/imgs/MNIST_K3_25.png" alt="MNIST K=3" title="MNIST K=3" width="70%" />
