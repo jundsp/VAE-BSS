@@ -9,7 +9,6 @@ Includes pre-trained models located in `saves/pretrained` (~80mb total).
 Author: Julian Neri  
 Webpage: [music.mcgill.ca/~julian/vae-bss](https://www.music.mcgill.ca/~julian/vae-bss)
 
-![Alt text](docs/imgs/vae-bss-diagram.png?raw=true "Title" | width=80)
 
 ## Instructions
 
@@ -33,3 +32,6 @@ Results for K = 2, 3, 4 assumed model sources are saved in the results directory
 **`train.py`** starts from scratch and trains a VAE model solely on data mixtures in an unsupervised way. It demonstrates the training procedure described in our paper. The number of epochs for training / testing is defined in `argparser.py`. Separation is clear within the first 10 epochs. You should get about the same results as the pre-trained models if you train over a few thousand epochs, following the training settings defined in our paper. The other arguments allow you to try different hyperparameters and settings for model training / specification, such as the dimension of the latent space, the prior probability, and the batch size.
 
 Either program will first download the MNIST data and prepare it as training and testing datasets. The datasets are saved in a directory that will be recalled for subsequent use.
+
+![Diagram](docs/imgs/vae-bss-diagram.png?raw=true "Diagram")
+
