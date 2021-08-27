@@ -36,4 +36,4 @@ Results for K = 2, 3, 4 assumed model sources are saved in the results directory
 Either program will first download the MNIST data and prepare it as training and testing datasets. The datasets are saved in a directory that will be recalled for subsequent use.
 
 
-<img src="docs/imgs/MNIST_K3_25.png" alt="MNIST K=3" title="MNIST K=3" width="60%" />
+<img src="docs/imgs/MNIST_K3_25.png" alt="MNIST K=3" title="MNIST K=3" width="700" />
