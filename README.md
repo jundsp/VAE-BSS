@@ -9,6 +9,8 @@ Includes pre-trained models located in `saves/pretrained` (~80mb total).
 Author: Julian Neri  
 Webpage: [music.mcgill.ca/~julian/vae-bss](https://www.music.mcgill.ca/~julian/vae-bss)
 
+![Diagram of VAE](./docs/imgs/diagram.png)
+
 ## Instructions
 
 ### Installation
