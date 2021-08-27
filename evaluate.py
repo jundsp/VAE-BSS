@@ -14,6 +14,7 @@ from src.dataloader import *
     
 args = parser.parse_args()
 torch.manual_seed(args.seed)
+
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 device = torch.device("cuda" if args.cuda else "cpu")
 kwargs = {'num_workers': args.num_workers, 'pin_memory': True} if args.cuda else {}
