@@ -35,7 +35,7 @@ Either program will first download the MNIST data and prepare it as training and
 
 ### Model Diagram
 <img src="docs/imgs/vae-bss-diagram.png" alt="Diagram"
-	title="Diagram" width="150" />
+	title="Diagram" width="500" />
 
 ### Separation of Image Mixtures
 
