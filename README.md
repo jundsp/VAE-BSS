@@ -9,7 +9,7 @@ Includes pre-trained models located in `saves/pretrained` (~80mb total).
 Author: Julian Neri  
 Webpage: [music.mcgill.ca/~julian/vae-bss](https://www.music.mcgill.ca/~julian/vae-bss)
 
-<img src="docs/imgs/vae-bss-diagram.png" alt="Diagram" title="Diagram" width="70%" />
+<img src="docs/imgs/vae-bss-diagram.png" alt="Diagram" title="Diagram" width="700" />
 
 
 ## Instructions
@@ -36,4 +36,4 @@ Results for K = 2, 3, 4 assumed model sources are saved in the results directory
 Either program will first download the MNIST data and prepare it as training and testing datasets. The datasets are saved in a directory that will be recalled for subsequent use.
 
 
-<img src="docs/imgs/MNIST_K3_25.png" alt="MNIST K=3" title="MNIST K=3" width="700" />
+<img src="docs/imgs/MNIST_K3_25.png" alt="MNIST K=3" title="MNIST K=3" width="600" />
