@@ -38,4 +38,4 @@ Either program will first download the MNIST data and prepare it as training and
 
 ### Separation of Image Mixtures
 
-![MNIST K=3](docs/imgs/MNIST_K3_25.png?raw=true "MNIST K=3")
+![MNIST K=3](docs/imgs/MNIST_K3_25.pdf?raw=true "MNIST K=3")
