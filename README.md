@@ -2,12 +2,11 @@
   
 A PyTorch model of the variational auto-encoder for unsupervised blind source separation, with training and evaluation programs, as described in
 
-* J. Neri, R. Badeau, P. Depalle, “[**Unsupervised Blind Source Separation with Variational Auto-Encoders**](https://www.music.mcgill.ca/~julian/wp-content/uploads/2021/06/2021_eusipco_vae_bss_neri.pdf)”, 29th European Signal Processing Conference (EUSIPCO), Dublin, Ireland, August 2021.
+* J. Neri, R. Badeau, P. Depalle, “[**Unsupervised Blind Source Separation with Variational Auto-Encoders**](https://hal.science/hal-03255341)”, 29th European Signal Processing Conference (EUSIPCO), Dublin, Ireland, August 2021. [doi:10.23919/EUSIPCO54536.2021.9616154](https://doi.org/10.23919/EUSIPCO54536.2021.9616154)
 
-Includes pre-trained models located in `saves/pretrained` (~80mb total).
+Includes pre-trained models located in `saves/pretrained` (~75 MB total).
 
-Author: Julian Neri  
-Webpage: [music.mcgill.ca/~julian/vae-bss](https://www.music.mcgill.ca/~julian/vae-bss)
+Author: Julian Neri
 
 <img src="docs/imgs/vae-bss-diagram.png" alt="Diagram" title="Diagram" width="700" />
 
@@ -16,12 +15,11 @@ Webpage: [music.mcgill.ca/~julian/vae-bss](https://www.music.mcgill.ca/~julian/v
 
 ### Installation
 
-Install the python packages listed in the `requirements.txt` file in the main directory of this repository.
-This can be done manually or with the following steps:
-
-1. Open the unix shell (terminal for mac users)
-2. Change working directory to "vae-bss-master"
-3. Execute this command: `pip install -r requirements.txt`
+```bash
+git clone https://github.com/jundsp/VAE-BSS.git
+cd VAE-BSS
+pip install -r requirements.txt
+```
 
 ### Usage
 
