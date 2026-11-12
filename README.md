@@ -1,4 +1,6 @@
 # VAE-BSS
+
+> **New: [DVAE-BSS](https://github.com/jundsp/DVAE-BSS)** adds a dynamical prior, so it separates audio of any length, with a pretrained model and a one-command `dvae-separate`. [Listen to examples](https://jundsp.github.io/DVAE-BSS/).
   
 A PyTorch model of the variational auto-encoder for unsupervised blind source separation, with training and evaluation programs, as described in
 
