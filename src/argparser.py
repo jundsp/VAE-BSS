@@ -39,16 +39,25 @@ parser.add_argument('--prior', type=str, default='gauss',
 parser.add_argument('--scale', type=float, default=0.5,
                     help='Scale of Laplace likelihood')
 parser.add_argument('--learning-rate', type=float, default=None,
-                    help='Learning rate (dataset default; mnist: 2e-4, audio_synthetic: 1e-3)')
+                    help='Learning rate (dataset default; mnist: 2e-4, audio_synthetic: 1e-3). '
+                         'With --resume, a given rate replaces the current one')
+parser.add_argument('--scheduler', type=str, default=None, choices=['step', 'cosine'],
+                    help='Learning-rate schedule (dataset default; mnist: step, as in the paper, '
+                         'audio_synthetic: cosine). step: multiply by --decay every epoch. '
+                         'cosine: fall from the learning rate to --min-lr along half a cosine, '
+                         'reaching it at the last epoch; a resumed run with a new --epochs (or '
+                         '--learning-rate) starts a new cosine from the current rate')
+parser.add_argument('--min-lr', type=float, default=None,
+                    help='Final learning rate of the cosine schedule (dataset default: 1e-4)')
 parser.add_argument('--variational', type=str, default=True,
                     help='VAE if True, AE if False.')
 parser.add_argument('--decay', type=float, default=None,
-                    help='Decay rate of scheduler for optimizer (dataset default; mnist: 0.9998, '
+                    help='Decay rate per epoch of the step scheduler (dataset default; mnist: 0.9998, '
                          'audio_synthetic: 0.9999)')
 parser.add_argument('--beta-max', type=float, default=None,
                     help='beta-VAE max value of weight (dataset default: 0.5)')
 parser.add_argument('--epochs', type=int, default=None,
-                    help='Training epochs (dataset default; mnist: 10, audio_synthetic: 5000)')
+                    help='Training epochs (dataset default; mnist: 10, audio_synthetic: 1000)')
 parser.add_argument('--warm-up', type=int, default=None,
                     help='Number of epochs to warm up beta (dataset default; mnist: 50, '
                          'audio_synthetic: 100)')
@@ -72,6 +81,7 @@ parser.add_argument('--eval-interval', type=int, default=None,
 def parse_args(argv=None):
     """Parse the arguments and fill the unset ones with the dataset's defaults."""
     args = parser.parse_args(argv)
+    args.given = {k for k, v in vars(args).items() if v is not None}  # dataset-default options given on the command line
     for key, value in get_dataset(args.dataset).defaults.items():
         if getattr(args, key) is None:
             setattr(args, key, value)

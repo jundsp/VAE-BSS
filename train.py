@@ -12,6 +12,7 @@ written.
 """
 
 import csv
+import math
 import json
 import os
 import sys
@@ -35,6 +36,37 @@ def get_device(no_cuda, use_mps):
     if not no_cuda and use_mps and torch.backends.mps.is_available():
         return torch.device("mps")
     return torch.device("cpu")
+
+
+class CosineLR(optim.lr_scheduler.LRScheduler):
+    """Half a cosine from the base rate at epoch ``start`` to ``min_lr`` at epoch ``total``.
+
+    ``restart`` begins a new cosine from the current rate, e.g. when a resumed run trains to
+    a new number of epochs, so the rate never jumps."""
+
+    def __init__(self, optimizer, total, min_lr, last_epoch=-1):
+        self.total, self.min_lr, self.start = total, min_lr, 0
+        super().__init__(optimizer, last_epoch)
+
+    def get_lr(self):
+        # last_epoch counts finished epochs: 0 while training the first one, total - 1 the last.
+        t = (self.last_epoch - self.start) / max(1, self.total - 1 - self.start)
+        t = min(max(t, 0.0), 1.0)
+        return [self.min_lr + (base - self.min_lr) * 0.5 * (1 + math.cos(math.pi * t))
+                for base in self.base_lrs]
+
+    def restart(self, lr, total, min_lr):
+        self.total, self.min_lr, self.start = total, min_lr, self.last_epoch
+        self.base_lrs = [lr] * len(self.optimizer.param_groups)
+        for group, rate in zip(self.optimizer.param_groups, self.get_lr()):
+            group['lr'] = rate
+        self._last_lr = [g['lr'] for g in self.optimizer.param_groups]
+
+
+def make_scheduler(optimizer, args):
+    if args.scheduler == 'cosine':
+        return CosineLR(optimizer, args.epochs, args.min_lr)
+    return optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=args.decay, last_epoch=-1)
 
 
 def value(v):
@@ -161,20 +193,25 @@ def save_training_state(path, epoch, losses, log, device):
     if getattr(sampler, 'generator', None) is not None:  # a sampler with its own generator
         rng['sampler'] = sampler.generator.get_state()
     torch.save({'epoch': epoch, 'optimizer': optimizer.state_dict(),
-                'scheduler': scheduler.state_dict(), 'losses': losses, 'log': log,
+                'scheduler': scheduler.state_dict(), 'scheduler_kind': args.scheduler, 'losses': losses, 'log': log,
                 'rng': rng}, tmp)
     os.replace(tmp, path)
 
 
 def resume(checkpoint, state_path, losses, device):
-    """Load the model and training state; returns the last finished epoch and the log."""
+    """Load the model and training state; returns the last finished epoch, the log and
+    whether the saved schedule must be replaced (another kind of scheduler, or none saved)."""
     model.load_state_dict(torch.load(checkpoint, map_location=device))
     if os.path.exists(state_path):
         # On the CPU: random states must be CPU tensors; the optimizer moves its own state.
         state = torch.load(state_path, map_location='cpu', weights_only=False)
         optimizer.load_state_dict(state['optimizer'])
-        scheduler.load_state_dict(state['scheduler'])
         done = state['epoch']
+        same = state.get('scheduler_kind', 'step') == args.scheduler
+        if same:
+            scheduler.load_state_dict(state['scheduler'])
+        else:  # e.g. a step-scheduled run continued with cosine: from the saved rate
+            scheduler.last_epoch = done
         for key in losses:
             n = min(done, len(losses[key]))
             losses[key][:n] = state['losses'][key][:n]
@@ -182,21 +219,21 @@ def resume(checkpoint, state_path, losses, device):
         if 'sampler' in state['rng']:
             train_loader.sampler.generator.set_state(state['rng']['sampler'])
         print('Resuming from epoch {} of {}'.format(done, checkpoint))
-        return done, state['log']
+        return done, state['log'], not same
     # Older runs saved only the weights: continue from the log, with a fresh optimizer.
     with open(os.path.join(results, 'log.csv')) as f:
         log = [{k: float(v) for k, v in r.items() if v != ''} for r in csv.DictReader(f)]
     done = int(log[-1]['epoch'])
     for _ in range(done):
         if optimizer.param_groups[0]['lr'] >= 1.0e-5:
-            scheduler.step()
+            scheduler.step()  # the schedule of the current options, as if run from the start
     for r in log[:len(losses['train'])]:
         losses['train'][int(r['epoch']) - 1, 0] = r['train_loss']
         losses['test'][int(r['epoch']) - 1, 0] = r['test_loss']
     print('Resuming from epoch {} of {} (weights only: no training state was saved, so the '
           'optimizer starts afresh and results differ from an uninterrupted run)'.format(
               done, checkpoint))
-    return done, log
+    return done, log, False
 
 
 def write_log(rows):
@@ -228,7 +265,7 @@ if __name__ == '__main__':
     loss_function = Loss(sources=args.sources,likelihood='laplace',variational=args.variational,prior=args.prior,scale=args.scale)
 
     optimizer = optim.Adam(model.parameters(), lr = args.learning_rate)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=args.decay, last_epoch=-1)
+    scheduler = make_scheduler(optimizer, args)
 
     losses = {"train": torch.zeros(args.epochs,3), "test": torch.zeros(args.epochs,3)}
     log = []
@@ -237,8 +274,22 @@ if __name__ == '__main__':
     if args.resume:
         if not os.path.exists(checkpoint):
             raise SystemExit('nothing to resume: {} does not exist'.format(checkpoint))
-        done, log = resume(checkpoint, state_path, losses, device)
+        done, log, replace = resume(checkpoint, state_path, losses, device)
         start = done + 1
+        lr = optimizer.param_groups[0]['lr']
+        if 'learning_rate' in args.given:  # continue at a new rate
+            lr = args.learning_rate
+            for group in optimizer.param_groups:
+                group['lr'] = lr
+        if args.scheduler == 'cosine' and (
+                replace or 'learning_rate' in args.given or args.epochs != scheduler.total
+                or args.min_lr != scheduler.min_lr):
+            # A new cosine from the current rate down to --min-lr at the new last epoch.
+            scheduler.restart(lr, args.epochs, args.min_lr)
+            print('Cosine schedule from {:g} at epoch {} to {:g} at epoch {}'.format(
+                lr, start, args.min_lr, args.epochs))
+        elif 'learning_rate' in args.given:
+            print('Learning rate set to {:g}'.format(lr))
 
     for epoch in range(start, args.epochs+1):
         beta = min(1.0,(epoch)/min(args.epochs,args.warm_up)) * args.beta_max
