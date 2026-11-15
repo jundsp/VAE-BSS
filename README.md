@@ -57,6 +57,8 @@ Training, epochs 10 to 1000: four validation mixtures (rows), each with the mixt
 
 Medians over the 750 held-out test notes (375 fixed mixtures), which played no part in training or in choosing the settings; IBM and IRM are the ideal binary and ratio masks (upper bounds). The model is exactly what the commands above give, with the default settings below and seed 1; on the validation notes it scores 13.73 dB VAEM.
 
+This audio model is a small proof of concept, a half-size network trained on 3000 synthetic notes, so its separations are not perfect: some notes keep traces of the other or lose part of their own sound.
+
 Listen to three test mixtures (the model's mask-based separations, VAEM, next to the true notes; each folder also has `spectrograms.png`):
 
 | Test mixture | Mixture | Separated | True notes | VAEM SI-SDR (dB) |
