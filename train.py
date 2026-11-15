@@ -136,6 +136,62 @@ def plot_progress(rows):
     plt.close(fig)
 
 
+def rng_states(device):
+    states = {'cpu': torch.get_rng_state()}
+    if device.type == 'cuda':
+        states['cuda'] = torch.cuda.get_rng_state_all()
+    elif device.type == 'mps':
+        states['mps'] = torch.mps.get_rng_state()
+    return states
+
+
+def set_rng_states(states, device):
+    torch.set_rng_state(states['cpu'])
+    if device.type == 'cuda' and 'cuda' in states:
+        torch.cuda.set_rng_state_all(states['cuda'])
+    elif device.type == 'mps' and 'mps' in states:
+        torch.mps.set_rng_state(states['mps'])
+
+
+def save_training_state(path, epoch, losses, log, device):
+    """Everything --resume needs to continue exactly where training stopped."""
+    tmp = path + '.tmp'
+    torch.save({'epoch': epoch, 'optimizer': optimizer.state_dict(),
+                'scheduler': scheduler.state_dict(), 'losses': losses, 'log': log,
+                'rng': rng_states(device)}, tmp)
+    os.replace(tmp, path)
+
+
+def resume(checkpoint, state_path, losses, device):
+    """Load the model and training state; returns the last finished epoch and the log."""
+    model.load_state_dict(torch.load(checkpoint, map_location=device))
+    if os.path.exists(state_path):
+        state = torch.load(state_path, map_location=device, weights_only=False)
+        optimizer.load_state_dict(state['optimizer'])
+        scheduler.load_state_dict(state['scheduler'])
+        done = state['epoch']
+        for key in losses:
+            n = min(done, len(losses[key]))
+            losses[key][:n] = state['losses'][key][:n]
+        set_rng_states(state['rng'], device)
+        print('Resuming from epoch {} of {}'.format(done, checkpoint))
+        return done, state['log']
+    # Older runs saved only the weights: continue from the log, with a fresh optimizer.
+    with open(os.path.join(results, 'log.csv')) as f:
+        log = [{k: float(v) for k, v in r.items() if v != ''} for r in csv.DictReader(f)]
+    done = int(log[-1]['epoch'])
+    for _ in range(done):
+        if optimizer.param_groups[0]['lr'] >= 1.0e-5:
+            scheduler.step()
+    for r in log[:len(losses['train'])]:
+        losses['train'][int(r['epoch']) - 1, 0] = r['train_loss']
+        losses['test'][int(r['epoch']) - 1, 0] = r['test_loss']
+    print('Resuming from epoch {} of {} (weights only: no training state was saved, so the '
+          'optimizer starts afresh and results differ from an uninterrupted run)'.format(
+              done, checkpoint))
+    return done, log
+
+
 def write_log(rows):
     fields = list(dict.fromkeys(k for r in rows for k in r))
     with open(os.path.join(results, 'log.csv'), 'w', newline='') as f:
@@ -169,8 +225,15 @@ if __name__ == '__main__':
 
     losses = {"train": torch.zeros(args.epochs,3), "test": torch.zeros(args.epochs,3)}
     log = []
+    state_path = os.path.splitext(checkpoint)[0] + '.train.pt'
+    start = 1
+    if args.resume:
+        if not os.path.exists(checkpoint):
+            raise SystemExit('nothing to resume: {} does not exist'.format(checkpoint))
+        done, log = resume(checkpoint, state_path, losses, device)
+        start = done + 1
 
-    for epoch in range(1, args.epochs+1):
+    for epoch in range(start, args.epochs+1):
         beta = min(1.0,(epoch)/min(args.epochs,args.warm_up)) * args.beta_max
 
         losses["train"][epoch-1] = train(epoch)
@@ -185,6 +248,7 @@ if __name__ == '__main__':
         with torch.no_grad():
             if epoch % args.save_interval == 0:
                 torch.save(model.state_dict(), checkpoint)
+                save_training_state(state_path, epoch, losses, log, device)
                 if getattr(dataset, 'config_keys', None):
                     with open(os.path.splitext(checkpoint)[0] + '.json', 'w') as f:
                         json.dump({k: getattr(args, k) for k in dataset.config_keys}, f)

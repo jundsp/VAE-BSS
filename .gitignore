@@ -3,4 +3,5 @@ __pycache__/
 .DS_Store
 data/
 results/
-saves/audio_synthetic_*.pt
+saves/audio_synthetic_*
+saves/*.train.pt

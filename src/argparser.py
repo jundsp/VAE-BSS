@@ -55,6 +55,9 @@ parser.add_argument('--warm-up', type=int, default=None,
 parser.add_argument('--save-interval', type=int, default=None,
                     help='How many epochs to wait before saving model (dataset default; '
                          'mnist: 1, audio_synthetic: 10)')
+parser.add_argument('--resume', action='store_true', default=False,
+                    help='Continue training from the saved model and training state (saved '
+                         'next to it as <model>.train.pt); raise --epochs to train longer')
 parser.add_argument('--compression', type=float, default=None, metavar='C',
                     help='Spectrogram magnitude compression |STFT|**C, as in the dissertation\'s '
                          'DVAE (audio only; dataset default: 1, no compression, as in the paper)')
