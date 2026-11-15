@@ -88,8 +88,11 @@ def scores(x, recons, extra):
     return out
 
 
-def _show(ax, mag, title=None):
-    db = 20 * np.log10(np.maximum(np.asarray(mag).reshape(N_BINS, N_FRAMES), 1e-4))
+def _show(ax, mag, title=None, compression=1.0):
+    """Spectrogram in dB of the linear magnitude: compressed magnitudes (``|X|**c``, the
+    model's domain) are decompressed first, so plots compare across compression settings."""
+    mag = np.maximum(np.asarray(mag).reshape(N_BINS, N_FRAMES), 0) ** (1.0 / compression)
+    db = 20 * np.log10(np.maximum(mag, 1e-4))
     ax.imshow(db, origin='lower', aspect='auto', vmin=-60, vmax=0, cmap='magma')
     ax.set_xticks([]), ax.set_yticks([])
     if title:
@@ -97,7 +100,8 @@ def _show(ax, mag, title=None):
 
 
 def figure(path, x, recon_x, recons, extra, n=4):
-    """Rows: test mixtures. Columns: mixture, reconstruction (sum of the K decoded sources),
+    """Spectrograms in dB of linear magnitude (decompressed if the model is compressed).
+    Rows: test mixtures. Columns: mixture, reconstruction (sum of the K decoded sources),
     the K decoded sources (VAE), the K mask-based sources (VAEM: each decoded source over
     their sum, a mask that sums to 1 over the sources, times the mixture) and the 2 true
     sources. Sources are ordered to match the true ones; extra model sources come last."""
@@ -120,7 +124,8 @@ def figure(path, x, recon_x, recons, extra, n=4):
     fig, axes = plt.subplots(n, len(cols), figsize=(2 * len(cols), 1.8 * n), squeeze=False)
     for r in range(n):
         for c, (title, spec) in enumerate(cols):
-            _show(axes[r, c], spec[r].cpu().numpy(), title if r == 0 else None)
+            _show(axes[r, c], spec[r].cpu().numpy(), title if r == 0 else None,
+                  extra['compression'])
     fig.tight_layout()
     fig.savefig(path, dpi=100)
     plt.close(fig)
@@ -130,7 +135,7 @@ def _write_wav(path, wave, peak):
     wavfile.write(path, SAMPLE_RATE, np.round(32767 * wave / peak).astype(np.int16))
 
 
-def _save_example(folder, names, mixture, rows, audio):
+def _save_example(folder, names, mixture, rows, audio, compression=1.0):
     """Spectrograms and .wav files of one test mixture."""
     os.makedirs(folder, exist_ok=True)
     peak = max(1e-9, max(float(np.abs(w).max()) for w in audio.values()))
@@ -143,10 +148,10 @@ def _save_example(folder, names, mixture, rows, audio):
                              squeeze=False)
     for ax in axes.flat:
         ax.axis('off')
-    _show(axes[0, 0], mixture, 'mixture')
+    _show(axes[0, 0], mixture, 'mixture', compression)
     for r, (label, specs) in enumerate(rows):
         for j, spec in enumerate(specs):
-            _show(axes[r, j + 1], spec, f'{label} {j + 1}')
+            _show(axes[r, j + 1], spec, f'{label} {j + 1}', compression)
     fig.tight_layout()
     fig.savefig(os.path.join(folder, 'spectrograms.png'), dpi=100)
     plt.close(fig)
@@ -204,7 +209,7 @@ def evaluate(model, args, out, device, examples=10, batch_size=64):
                         ('VAEM', s_vaem[b, order].cpu().numpy()),
                         ('true', extra['s'][b].cpu().numpy())]
                 _save_example(os.path.join(out, f'example_{index + 1:02d}'), names,
-                              x[b].cpu().numpy(), rows, audio)
+                              x[b].cpu().numpy(), rows, audio, args.compression)
             index += 1
 
     with open(os.path.join(out, 'scores.csv'), 'w') as f:
