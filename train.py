@@ -13,6 +13,7 @@ written.
 
 import csv
 import os
+import sys
 
 import numpy as np
 import torch
@@ -144,6 +145,7 @@ def write_log(rows):
 
 
 if __name__ == '__main__':
+    sys.stdout.reconfigure(line_buffering=True)  # log lines appear at once, even in a file
     args = parse_args()
     dataset = get_dataset(args.dataset)
     torch.manual_seed(args.seed)
