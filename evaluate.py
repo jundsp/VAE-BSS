@@ -14,6 +14,7 @@ VAEM with image grids. Add ``--variational False`` for a model trained as an AE.
 """
 
 import argparse
+import json
 import os
 import shutil
 from types import SimpleNamespace
@@ -29,6 +30,9 @@ parser.add_argument('--checkpoint', type=str, default=None,
                     help='Model saved by train.py (default: the pretrained MNIST models)')
 parser.add_argument('--variational', type=str, default=True,
                     help='VAE if True, AE if False (for --checkpoint)')
+parser.add_argument('--compression', type=float, default=None,
+                    help='Magnitude compression the model was trained with (default: read from '
+                         'the .json saved next to the checkpoint, else none)')
 parser.add_argument('--data-directory', type=str, default=None,
                     help='Data folder (default: the dataset\'s, data or data/audio_synthetic)')
 parser.add_argument('--out', type=str, default=None,
@@ -64,10 +68,20 @@ def evaluate_checkpoint():
     model.eval()
     run = SimpleNamespace(sources=sources, data_directory=args.data_directory
                           or dataset.defaults['data_directory'])
+    # Processing settings saved by train.py next to the model (e.g. the compression).
+    config = os.path.splitext(args.checkpoint)[0] + '.json'
+    for key in getattr(dataset, 'config_keys', ()):
+        setattr(run, key, dataset.defaults[key])
+    if os.path.exists(config):
+        with open(config) as f:
+            vars(run).update(json.load(f))
+    if args.compression is not None:
+        run.compression = args.compression
     name = os.path.splitext(os.path.basename(args.checkpoint))[0]
     out = args.out or os.path.join('results', 'eval_' + name)
     os.makedirs(out, exist_ok=True)
-    print(f'{name}: {dataset.name}, K = {sources}, {"VAE" if variational else "AE"}')
+    settings = ''.join(f', {k} = {getattr(run, k)}' for k in getattr(dataset, 'config_keys', ()))
+    print(f'{name}: {dataset.name}, K = {sources}, {"VAE" if variational else "AE"}{settings}')
     dataset.evaluate(model, run, out, dev, examples=args.examples)
 
 

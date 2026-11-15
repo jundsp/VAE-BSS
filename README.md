@@ -54,6 +54,8 @@ Processing follows the paper:
 * Adam, batch of 128 mixtures, learning rate 1e-4 decayed by 0.01 % per epoch, β rising from 0 to 0.5 over the first 100 epochs;
 * separated audio is synthesized from each estimated magnitude with the mixture's phase and the inverse STFT.
 
+`--compression 0.5` compresses the magnitudes to |STFT|^0.5 before the 0-1 normalization, as the dissertation does for the DVAE (Section 6.3.7); the model, its masks (VAEM) and its loss then work in the compressed domain, and synthesis undoes the compression before the inverse STFT. The paper's VAE uses no compression (the default). The setting is saved next to the model (`saves/<name>.json`) for `evaluate.py`, and runs with compression are named `audio_synthetic_c0.5_...`.
+
 Training saves the model to `saves/audio_synthetic_vae_K2.pt` and, every 10 epochs, to `results/audio_synthetic_vae_K2/`: `reconstruction_<epoch>.png` (test mixtures, reconstruction, separated and true spectrograms), `progress.png` (losses and median test SI-SDR of VAE and VAEM), `losses.png` and `log.csv`. `evaluate.py` reports median SI-SDR, SIR and SAR over the test sources for the VAE, the VAE with masking (VAEM) and the ideal binary and ratio masks (upper bounds), like Table III, and saves .wav examples. SIR and SAR are the scale-invariant versions (Le Roux et al., 2019) rather than bss_eval's, so only SI-SDR is directly comparable to the paper. The paper's MUMS results are not reproduced here: the data differ.
 
 The default model has about 85 M parameters (a 0.34 GB checkpoint), so a GPU is recommended; Apple-silicon GPUs (MPS) are used when available. To train on your own notes (e.g. MUMS), put mono 44.1 kHz .wav files under `train/` and `test/` in one folder and pass it with `--data-directory`.

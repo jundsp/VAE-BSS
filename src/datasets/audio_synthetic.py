@@ -41,13 +41,17 @@ defaults = dict(
     save_interval=10,
     plot_interval=10,
     eval_interval=10,  # median test SI-SDR of VAE and VAEM
+    compression=1.0,   # |STFT|**c; the paper's VAE uses none, the dissertation's DVAE c = 0.5
 )
-use_mps = True         # Apple-silicon GPUs help with this 190 M parameter model
+use_mps = True         # Apple-silicon GPUs help with this large model
+# Settings that change the processing, so evaluate.py needs them: saved next to the model.
+config_keys = ('compression',)
 
 
 def paths(args):
     """Results folder and checkpoint of a training run (never in saves/pretrained)."""
-    name = f"audio_synthetic_{'vae' if args.variational else 'ae'}_K{args.sources}"
+    c = '' if args.compression == 1 else f'c{args.compression:g}_'
+    name = f"audio_synthetic_{c}{'vae' if args.variational else 'ae'}_K{args.sources}"
     return f'results/{name}', f'saves/{name}.pt'
 
 
@@ -58,11 +62,12 @@ def loaders(args, device):
     return get_loaders(args.data_directory, args.batch_size, kwargs)
 
 
-def prepare(batch, device):
+def prepare(batch, device, args):
     """Mix a batch of note pairs: the model's input ``x`` ``(B, DIMX)`` and the extras needed
-    to score and plot it (true sources, mixture STFT and normalization)."""
-    x, s, mix_spec, src_spec, norm = mix_audio(batch.to(device))
-    return x, dict(s=s, mix_spec=mix_spec, src_spec=src_spec, norm=norm)
+    to score and plot it (true sources, mixture STFT, normalization and compression)."""
+    x, s, mix_spec, src_spec, norm = mix_audio(batch.to(device), args.compression)
+    return x, dict(s=s, mix_spec=mix_spec, src_spec=src_spec, norm=norm,
+                   compression=args.compression)
 
 
 def _sources(x, recons, n_sources):
@@ -77,7 +82,8 @@ def scores(x, recons, extra):
     refs = istft(extra['src_spec'])  # true sources, band-limited to 5.5 kHz like the model
     out = {}
     for label, est in (('VAE', s_vae), ('VAEM', s_vaem)):
-        est, _ = match_sources(to_audio(est, extra['mix_spec'], extra['norm']), refs)
+        est, _ = match_sources(
+            to_audio(est, extra['mix_spec'], extra['norm'], extra['compression']), refs)
         out[f'{label} SI-SDR'] = bss_measures(est, refs)[0].flatten()
     return out
 
@@ -158,7 +164,7 @@ def evaluate(model, args, out, device, examples=10, batch_size=64):
     records = []
     index = 0
     for batch in loader:
-        x, extra = prepare(batch, device)
+        x, extra = prepare(batch, device, args)
         mix_spec, src_spec, norm = extra['mix_spec'], extra['src_spec'], extra['norm']
         recons = model(x)[3]
         s_vae, s_vaem = _sources(x, recons, k)
@@ -166,8 +172,9 @@ def evaluate(model, args, out, device, examples=10, batch_size=64):
         phase = torch.exp(1j * torch.angle(mix_spec)).unsqueeze(1)
 
         refs = istft(src_spec)
-        estimates = {'VAE': to_audio(s_vae, mix_spec, norm),
-                     'VAEM': to_audio(s_vaem, mix_spec, norm),
+        c = args.compression  # the masks (VAEM) are applied in the compressed domain
+        estimates = {'VAE': to_audio(s_vae, mix_spec, norm, c),
+                     'VAEM': to_audio(s_vaem, mix_spec, norm, c),
                      'IBM': istft(ibm * phase), 'IRM': istft(irm * phase)}
         for m, est in estimates.items():
             matched, order = match_sources(est, refs)

@@ -54,7 +54,7 @@ def loaders(args, device):
     return get_data_loaders(args.data_directory, args.batch_size, kwargs)
 
 
-def prepare(batch, device):
+def prepare(batch, device, args=None):
     """Mix the first half of a batch of digits with the second half."""
     x, s = mix_data(batch[0].to(device))
     return x.view(-1, dimx), dict(s=s)
@@ -95,7 +95,7 @@ def evaluate(model, args, out, device, examples=10, batch_size=1000):
     medians = {}
     totals = {}
     for i, batch in enumerate(test_loader):
-        x, extra = prepare(batch, device)
+        x, extra = prepare(batch, device, args)
         recons = model(x)[3]
         for key, value in scores(x, recons, extra).items():
             totals.setdefault(key, []).append(value.cpu())

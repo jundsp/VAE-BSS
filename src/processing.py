@@ -9,6 +9,13 @@ Settings follow the EUSIPCO 2021 paper (Sec. V-A) and the dissertation (Sec. 6.2
 * separated audio is synthesized from an estimated magnitude with the mixture's phase and the
   inverse STFT, then scored with SI-SDR, SIR and SAR (see metrics.py).
 
+Optionally (``compression`` c < 1), the magnitudes are compressed to ``|STFT|**c`` before the
+normalization, as in the DVAE of the dissertation (Sec. 6.3.7, Eq. 6.46; c = 0.5 there):
+fractional power spectrograms fit the additivity assumption of the model better and give the
+quiet partials more weight in the loss. The model then works entirely in the compressed
+domain, including the masks (Eq. 6.45), and synthesis undoes the compression,
+``|S|**(1/c)``, before the inverse STFT. The paper's VAE uses c = 1 (no compression).
+
 Because the model sees magnitudes, the mixture is not exactly the sum of its sources: phase
 differences between the sources change the mixture's magnitude (paper, Sec. V-A).
 """
@@ -48,34 +55,47 @@ def istft(spec):
     return waves.reshape(*shape, N_SAMPLES)
 
 
-def mix_audio(sources):
+def compress(mag, compression):
+    """Power-law magnitude compression ``|X|**c`` (identity for c = 1)."""
+    return mag if compression == 1 else mag.pow(compression)
+
+
+def decompress(mag, compression):
+    """Inverse of :func:`compress`, ``Y**(1/c)``."""
+    return mag if compression == 1 else mag.clamp_min(0).pow(1.0 / compression)
+
+
+def mix_audio(sources, compression=1.0):
     """Mix source waveforms and build the model's input, like ``mix_data`` does for MNIST.
 
     Args:
         sources: ``(B, M, N_SAMPLES)`` waveforms of the M sources of each mixture.
+        compression: Exponent c of the magnitudes, ``|STFT|**c`` (1: no compression).
 
     Returns:
-        x: ``(B, DIMX)`` mixture magnitude spectrograms, each normalized to a maximum of 1.
-        s: ``(B, M, N_BINS, N_FRAMES)`` source magnitudes on the same scale as ``x``
-           (ground truth, used only for evaluation and plots, never for training).
+        x: ``(B, DIMX)`` mixture (compressed) magnitude spectrograms, each normalized to a
+           maximum of 1.
+        s: ``(B, M, N_BINS, N_FRAMES)`` source (compressed) magnitudes on the same scale as
+           ``x`` (ground truth, used only for evaluation and plots, never for training).
         mix_spec: ``(B, N_BINS, N_FRAMES)`` complex STFT of the mixture, unnormalized; its
            phase and ``norm`` turn estimated magnitudes back into audio.
         src_spec: ``(B, M, N_BINS, N_FRAMES)`` complex STFTs of the sources.
-        norm: ``(B, 1, 1)`` normalization constant of each mixture.
+        norm: ``(B, 1, 1)`` normalization constant of each mixture (compressed domain).
     """
     src_spec = stft(sources)
     mix_spec = src_spec.sum(1)
-    mag = mix_spec.abs()
+    mag = compress(mix_spec.abs(), compression)
     norm = mag.amax(dim=(-2, -1), keepdim=True).clamp_min(EPS)
     x = (mag / norm).reshape(-1, DIMX)
-    s = src_spec.abs() / norm.unsqueeze(1)
+    s = compress(src_spec.abs(), compression) / norm.unsqueeze(1)
     return x, s, mix_spec, src_spec, norm
 
 
-def to_audio(mags, mix_spec, norm):
-    """Waveforms from estimated magnitudes ``(B, K, N_BINS, N_FRAMES)`` with the mixture phase."""
+def to_audio(mags, mix_spec, norm, compression=1.0):
+    """Waveforms from estimated (compressed, normalized) magnitudes ``(B, K, N_BINS, N_FRAMES)``:
+    undo the normalization and the compression, then use the mixture phase."""
     phase = torch.exp(1j * torch.angle(mix_spec)).unsqueeze(1)
-    return istft(mags * norm.unsqueeze(1) * phase)
+    return istft(decompress(mags * norm.unsqueeze(1), compression) * phase)
 
 
 def ideal_masks(src_spec, mix_spec):

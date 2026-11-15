@@ -12,6 +12,7 @@ written.
 """
 
 import csv
+import json
 import os
 import sys
 
@@ -47,7 +48,7 @@ def train(epoch):
     train_losses = torch.zeros(3)
 
     for batch_idx, batch in enumerate(train_loader):
-        data = dataset.prepare(batch, device)[0]
+        data = dataset.prepare(batch, device, args)[0]
 
         optimizer.zero_grad()
         recon_y, mu_z, logvar_z, _ = model(data)
@@ -81,7 +82,7 @@ def test(epoch):
 
     with torch.no_grad():
         for i, batch in enumerate(test_loader):
-            data, extra = dataset.prepare(batch, device)
+            data, extra = dataset.prepare(batch, device, args)
 
             recon_y, mu_z, logvar_z, recons = model(data)
             loss, ELL, KLD = loss_function(data,recon_y, mu_z, logvar_z, beta=beta)
@@ -184,6 +185,9 @@ if __name__ == '__main__':
         with torch.no_grad():
             if epoch % args.save_interval == 0:
                 torch.save(model.state_dict(), checkpoint)
+                if getattr(dataset, 'config_keys', None):
+                    with open(os.path.splitext(checkpoint)[0] + '.json', 'w') as f:
+                        json.dump({k: getattr(args, k) for k in dataset.config_keys}, f)
                 write_log(log)
                 plot_losses(losses, epoch)
                 if args.eval_interval > 0:
