@@ -33,11 +33,10 @@ def load_note(path):
 
 
 class NotePairs(torch.utils.data.Dataset):
-    """Pairs of notes from one folder (searched recursively for .wav files).
-
-    Item ``i`` is note ``i`` and a partner note, stacked as a ``(2, N_SAMPLES)`` tensor.
-    With ``fixed=False`` the partner is drawn at random on every access (training); with
-    ``fixed=True`` the notes are paired once from ``seed`` and there are ``len // 2`` items.
+    """Pairs of notes from one folder (searched recursively for .wav files), each item a
+    ``(2, N_SAMPLES)`` tensor. With ``fixed=False`` (training), items are indexed by a pair
+    of note indices, drawn by :class:`PairSampler`; with ``fixed=True`` (test), the notes are
+    paired once from ``seed`` and item ``i`` is the ``i``-th pair (``len // 2`` items).
     """
 
     def __init__(self, folder, fixed=False, seed=0):
@@ -57,10 +56,7 @@ class NotePairs(torch.utils.data.Dataset):
         if self.fixed:
             a, b = self.pairs[i]
         else:
-            # Torch's generator is seeded differently in every worker and epoch.
-            a = i
-            b = int(torch.randint(len(self.files) - 1, ()))
-            b += b >= a  # never the same note twice
+            a, b = i  # a pair of note indices from PairSampler
         return torch.from_numpy(np.stack([load_note(self.files[a]), load_note(self.files[b])]))
 
     def name(self, i):
@@ -68,12 +64,36 @@ class NotePairs(torch.utils.data.Dataset):
         return [self.files[j].stem for j in self.pairs[i]]
 
 
-def get_loaders(directory, batch_size, kwargs, seed=0):
-    """Training loader (random pairs) on ``directory/train`` and test loader (fixed pairs)."""
+class PairSampler(torch.utils.data.Sampler):
+    """Every note once per epoch, in random order, each with a random partner (never itself).
+
+    The pairs are drawn in the main process from the sampler's own ``generator``, so they do
+    not depend on the data-loading workers, and saving and restoring the generator's state
+    (train.py --resume) continues the same sequence of training mixtures.
+    """
+
+    def __init__(self, num_notes, seed=0):
+        self.num_notes = num_notes
+        self.generator = torch.Generator().manual_seed(seed)
+
+    def __len__(self):
+        return self.num_notes
+
+    def __iter__(self):
+        order = torch.randperm(self.num_notes, generator=self.generator)
+        partner = torch.randint(self.num_notes - 1, (self.num_notes,), generator=self.generator)
+        partner += partner >= order  # skip the note itself
+        return iter(zip(order.tolist(), partner.tolist()))
+
+
+def get_loaders(directory, batch_size, kwargs, seed=0, train_seed=1):
+    """Training loader (random pairs, ``train_seed``) on ``directory/train`` and test loader
+    (pairs fixed by ``seed``) on ``directory/test``."""
     train_set = NotePairs(Path(directory) / "train")
     test_set = NotePairs(Path(directory) / "test", fixed=True, seed=seed)
-    train_loader = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True,
-                                               drop_last=True, **kwargs)
+    train_loader = torch.utils.data.DataLoader(
+        train_set, batch_size=batch_size, sampler=PairSampler(len(train_set), train_seed),
+        drop_last=True, **kwargs)
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False,
                                               **kwargs)
     return train_loader, test_loader

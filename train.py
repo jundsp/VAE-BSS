@@ -156,9 +156,13 @@ def set_rng_states(states, device):
 def save_training_state(path, epoch, losses, log, device):
     """Everything --resume needs to continue exactly where training stopped."""
     tmp = path + '.tmp'
+    rng = rng_states(device)
+    sampler = getattr(train_loader, 'sampler', None)
+    if getattr(sampler, 'generator', None) is not None:  # a sampler with its own generator
+        rng['sampler'] = sampler.generator.get_state()
     torch.save({'epoch': epoch, 'optimizer': optimizer.state_dict(),
                 'scheduler': scheduler.state_dict(), 'losses': losses, 'log': log,
-                'rng': rng_states(device)}, tmp)
+                'rng': rng}, tmp)
     os.replace(tmp, path)
 
 
@@ -166,7 +170,8 @@ def resume(checkpoint, state_path, losses, device):
     """Load the model and training state; returns the last finished epoch and the log."""
     model.load_state_dict(torch.load(checkpoint, map_location=device))
     if os.path.exists(state_path):
-        state = torch.load(state_path, map_location=device, weights_only=False)
+        # On the CPU: random states must be CPU tensors; the optimizer moves its own state.
+        state = torch.load(state_path, map_location='cpu', weights_only=False)
         optimizer.load_state_dict(state['optimizer'])
         scheduler.load_state_dict(state['scheduler'])
         done = state['epoch']
@@ -174,6 +179,8 @@ def resume(checkpoint, state_path, losses, device):
             n = min(done, len(losses[key]))
             losses[key][:n] = state['losses'][key][:n]
         set_rng_states(state['rng'], device)
+        if 'sampler' in state['rng']:
+            train_loader.sampler.generator.set_state(state['rng']['sampler'])
         print('Resuming from epoch {} of {}'.format(done, checkpoint))
         return done, state['log']
     # Older runs saved only the weights: continue from the log, with a fresh optimizer.

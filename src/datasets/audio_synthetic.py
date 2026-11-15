@@ -59,7 +59,7 @@ def loaders(args, device):
     kwargs = {'num_workers': args.num_workers, 'persistent_workers': args.num_workers > 0}
     if device.type == 'cuda':
         kwargs['pin_memory'] = True
-    return get_loaders(args.data_directory, args.batch_size, kwargs)
+    return get_loaders(args.data_directory, args.batch_size, kwargs, train_seed=args.seed)
 
 
 def prepare(batch, device, args):
