@@ -91,13 +91,26 @@ def _show(ax, mag, title=None):
 
 
 def figure(path, x, recon_x, recons, extra, n=4):
-    """Rows: test mixtures. Columns: mixture, reconstruction, K sources, 2 true sources."""
-    k = recons.shape[1]
-    s = extra['s']
-    cols = [('mixture', x), ('reconstruction', recon_x)]
-    cols += [(f'source {j + 1}', recons[:, j]) for j in range(k)]
-    cols += [(f'true {j + 1}', s[:, j]) for j in range(s.shape[1])]
+    """Rows: test mixtures. Columns: mixture, reconstruction (sum of the K decoded sources),
+    the K decoded sources (VAE), the K mask-based sources (VAEM: each decoded source over
+    their sum, a mask that sums to 1 over the sources, times the mixture) and the 2 true
+    sources. Sources are ordered to match the true ones; extra model sources come last."""
     n = min(n, len(x))
+    x, recon_x, recons = x[:n], recon_x[:n], recons[:n]
+    k = recons.shape[1]
+    s = extra['s'][:n]
+    s_vae, s_vaem = _sources(x, recons, k)
+    # Match on the VAE sources, so both rows share one order.
+    _, index = match_sources(s_vae, s)
+    order = torch.stack([torch.cat([i, torch.tensor([j for j in range(k) if j not in i],
+                                                    dtype=i.dtype, device=i.device)])
+                         for i in index])
+    pick = order.view(n, k, 1, 1).expand(-1, -1, N_BINS, N_FRAMES)
+    s_vae, s_vaem = s_vae.gather(1, pick), s_vaem.gather(1, pick)
+    cols = [('mixture', x), ('reconstruction', recon_x)]
+    cols += [(f'VAE {j + 1}', s_vae[:, j]) for j in range(k)]
+    cols += [(f'VAEM {j + 1}', s_vaem[:, j]) for j in range(k)]
+    cols += [(f'true {j + 1}', s[:, j]) for j in range(s.shape[1])]
     fig, axes = plt.subplots(n, len(cols), figsize=(2 * len(cols), 1.8 * n), squeeze=False)
     for r in range(n):
         for c, (title, spec) in enumerate(cols):
