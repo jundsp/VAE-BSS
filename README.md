@@ -45,6 +45,18 @@ python train.py --dataset audio_synthetic    # see the settings below
 python evaluate.py --checkpoint saves/audio_synthetic_c0.5_vae_K2.pt
 ```
 
+<img src="docs/imgs/audio_training.gif" alt="Separation of synthetic note mixtures over training" title="Separation of synthetic note mixtures over training" width="800" />
+
+Training with the default settings, epochs 10 to 800: four test mixtures (rows), each with the mixture, the model's reconstruction, its two decoded sources (VAE), the mask-based sources (VAEM) and the true notes. Made with `python -m src.animate results/audio_synthetic_c0.5_vae_K2 -o docs/imgs/audio_training.gif`.
+
+| 800 epochs, test set (dB) | VAE | VAEM | VAEW | IBM | IRM |
+|---|---|---|---|---|---|
+| SI-SDR | 7.92 | 13.48 | 13.13 | 22.54 | 21.24 |
+| SIR | 30.52 | 30.85 | 20.01 | 44.41 | 32.67 |
+| SAR | 8.21 | 14.66 | 16.58 | 22.63 | 21.78 |
+
+Medians over the 750 test notes of 375 fixed test mixtures, with the default settings below; IBM and IRM are the ideal binary and ratio masks (upper bounds).
+
 Processing follows the paper, with the two exceptions listed after:
 
 * notes at 44.1 kHz; 2048-point STFT, Hann window, hop of 512 samples;
@@ -59,7 +71,7 @@ Two defaults differ from the paper, because the paper's settings did not separat
 * learning rate 1e-3 (the paper: 1e-4, `--learning-rate 1e-4`);
 * magnitudes compressed to |STFT|^0.5 before the 0-1 normalization, as the dissertation does for the DVAE (Section 6.3.7); the model, its masks (VAEM) and its loss then work in the compressed domain, and synthesis undoes the compression before the inverse STFT. The paper's VAE uses no compression (`--compression 1`).
 
-After 300 epochs (median test SI-SDR of VAEM): 0.9 dB with the paper's settings (stopped at epoch 120, no separation), 5.3 dB with learning rate 1e-3, and 11.3 dB with learning rate 1e-3 and compression 0.5 (VAE 6.9, VAEW 11.2, IBM 22.5, IRM 21.2 dB).
+Median test SI-SDR of VAEM after 300 epochs: 0.9 dB with the paper's settings (stopped at epoch 120, no separation), 5.3 dB with learning rate 1e-3, and 11.3 dB with learning rate 1e-3 and compression 0.5 (13.5 dB after 800 epochs, the table above).
 
 The compression is saved next to the model (`saves/<name>.json`) for `evaluate.py`, and runs are named after it, e.g. `audio_synthetic_c0.5_vae_K2` (no `c` part without compression). With compression, the masked sources (VAEM) no longer add up to the mixture after decompression (the masks become m^(1/c)), so `evaluate.py` also reports VAEW: the ratio masks from the compressed estimates applied to the uncompressed mixture STFT, a generalized Wiener filter (Liutkus and Badeau, 2015) whose sources add up exactly to the mixture.
 
