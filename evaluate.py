@@ -1,7 +1,7 @@
 """Evaluate VAE-BSS.
 
     python evaluate.py                                             # pretrained MNIST models
-    python evaluate.py --checkpoint saves/synthetic_vae_K2.pt      # a model from train.py
+    python evaluate.py --checkpoint saves/audio_synthetic_vae_K2.pt      # a model from train.py
 
 Without a checkpoint, separates mixed MNIST test digits with the pretrained models in
 saves/pretrained (AE and VAE, K = 2, 3, 4) and saves image grids in results/.
@@ -30,7 +30,7 @@ parser.add_argument('--checkpoint', type=str, default=None,
 parser.add_argument('--variational', type=str, default=True,
                     help='VAE if True, AE if False (for --checkpoint)')
 parser.add_argument('--data-directory', type=str, default=None,
-                    help='Data folder (default: the dataset\'s, data or data/synthetic)')
+                    help='Data folder (default: the dataset\'s, data or data/audio_synthetic)')
 parser.add_argument('--out', type=str, default=None,
                     help='Results folder (default: results, or results/eval_<checkpoint name>)')
 parser.add_argument('--examples', type=int, default=10, help='Examples to save (--checkpoint)')

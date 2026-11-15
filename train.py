@@ -1,13 +1,13 @@
 """Train VAE-BSS from scratch, solely on data mixtures, in an unsupervised way.
 
     python train.py                                   # MNIST digits, as before
-    python -m src.datasets.synthetic_notes            # once: synthetic notes in data/synthetic
-    python train.py --dataset synthetic               # spectrograms of mixed notes
+    python -m src.datasets.synthetic_notes            # once: synthetic notes in data/audio_synthetic
+    python train.py --dataset audio_synthetic         # spectrograms of mixed notes
 
 Options that are not given take the dataset's settings from the paper (src/argparser.py).
-The model is saved to saves/ (MNIST: saves/model_<vae|ae>_K<sources>.pt, synthetic:
-saves/synthetic_<vae|ae>_K<sources>.pt) and figures to results/ (synthetic:
-results/synthetic_<vae|ae>_K<sources>/). The pretrained models in saves/pretrained are never
+The model is saved to saves/ (MNIST: saves/model_<vae|ae>_K<sources>.pt, audio_synthetic:
+saves/audio_synthetic_<vae|ae>_K<sources>.pt) and figures to results/ (audio_synthetic:
+results/audio_synthetic_<vae|ae>_K<sources>/). The pretrained models in saves/pretrained are never
 written.
 """
 

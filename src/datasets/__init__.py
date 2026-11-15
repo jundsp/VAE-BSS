@@ -10,7 +10,7 @@ import importlib
 
 DATASETS = {
     'mnist': 'src.datasets.mnist',          # mixed pairs of handwritten digits (images)
-    'synthetic': 'src.datasets.synthetic',  # mixed pairs of synthetic notes (spectrograms)
+    'audio_synthetic': 'src.datasets.audio_synthetic',  # mixed pairs of synthetic notes (spectrograms)
 }
 
 
@@ -20,7 +20,7 @@ def get_dataset(name):
 
 
 def dataset_for_dimx(dimx):
-    """The dataset whose inputs have ``dimx`` elements (784: mnist, 32768: synthetic)."""
+    """The dataset whose inputs have ``dimx`` elements (784: mnist, 32768: audio_synthetic)."""
     for name in DATASETS:
         try:
             dataset = get_dataset(name)

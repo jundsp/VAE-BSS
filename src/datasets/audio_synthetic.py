@@ -21,12 +21,12 @@ from ..processing import (DIMX, N_BINS, N_FRAMES, SAMPLE_RATE, ideal_masks, istf
                          to_audio)
 from .notes import NotePairs, get_loaders
 
-name = 'synthetic'
+name = 'audio_synthetic'
 dimx = DIMX  # 256 bins x 128 frames
 
 # Settings of the paper's spectrogram experiment.
 defaults = dict(
-    data_directory='data/synthetic',
+    data_directory='data/audio_synthetic',
     dimz=64,
     # Half the paper's hidden units (2560, 2048, 1536, 1024, 512), which gives 85 M instead
     # of 190 M parameters: most are in the first encoder and last decoder layers. Use
@@ -47,7 +47,7 @@ use_mps = True         # Apple-silicon GPUs help with this 190 M parameter model
 
 def paths(args):
     """Results folder and checkpoint of a training run (never in saves/pretrained)."""
-    name = f"synthetic_{'vae' if args.variational else 'ae'}_K{args.sources}"
+    name = f"audio_synthetic_{'vae' if args.variational else 'ae'}_K{args.sources}"
     return f'results/{name}', f'saves/{name}.pt'
 
 

@@ -16,8 +16,8 @@ Nothing is stored in the repository: this module regenerates the same notes from
 ``<root>/<split>/<family>/<midi>_<family>_<index>.wav``, split 80 % / 20 % into training and
 test notes like MUMS in the paper:
 
-    python -m src.datasets.synthetic_notes                    # data/synthetic/{train,test}
-    python -m src.datasets.synthetic_notes --train 300 --test 100 -o data/synthetic_small
+    python -m src.datasets.synthetic_notes                    # data/audio_synthetic/{train,test}
+    python -m src.datasets.synthetic_notes --train 300 --test 100 -o data/audio_synthetic_small
 """
 
 import argparse
@@ -178,7 +178,7 @@ def write_notes(folder, num_notes, seed=0, sample_rate=SAMPLE_RATE):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("-o", "--out", type=Path, default=Path("data/synthetic"))
+    parser.add_argument("-o", "--out", type=Path, default=Path("data/audio_synthetic"))
     parser.add_argument("--train", type=int, default=3000, help="training notes (default: 3000)")
     parser.add_argument("--test", type=int, default=750, help="test notes (default: 750)")
     parser.add_argument("--seed", type=int, default=0)
