@@ -98,6 +98,17 @@ def to_audio(mags, mix_spec, norm, compression=1.0):
     return istft(decompress(mags * norm.unsqueeze(1), compression) * phase)
 
 
+def wiener_audio(mags, mix_spec):
+    """Waveforms by generalized Wiener filtering (Liutkus and Badeau, 2015): ratio masks
+    ``S_k / sum_j S_j`` from the estimated (possibly compressed) magnitudes ``(B, K, ...)``,
+    applied to the uncompressed complex mixture STFT. The masks sum to 1, so the separated
+    waveforms add up exactly to the (band-limited) mixture, whatever the compression. With
+    compression, masking the compressed mixture and decompressing (VAEM) instead gives
+    masks ``m_k**(1/c)``, which do not sum to 1."""
+    masks = mags / mags.sum(1, keepdim=True).clamp_min(EPS)
+    return istft(masks * mix_spec.unsqueeze(1))
+
+
 def ideal_masks(src_spec, mix_spec):
     """Ideal binary and ratio masks (upper bounds), as magnitudes on the mixture's scale."""
     mags = src_spec.abs()

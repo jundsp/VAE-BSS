@@ -18,7 +18,7 @@ from scipy.io import wavfile
 from ..utils import vae_masks
 from ..metrics import bss_measures, match_sources
 from ..processing import (DIMX, N_BINS, N_FRAMES, SAMPLE_RATE, ideal_masks, istft, mix_audio,
-                         to_audio)
+                         to_audio, wiener_audio)
 from .notes import NotePairs, get_loaders
 
 name = 'audio_synthetic'
@@ -77,13 +77,18 @@ def _sources(x, recons, n_sources):
 
 
 def scores(x, recons, extra):
-    """Median-able SI-SDR (dB) of every true source, for the VAE and VAEM estimates."""
+    """Median-able SI-SDR (dB) of every true source, for the VAE and VAEM estimates, and
+    with compression also the Wiener-filtered estimates (VAEW, see processing.wiener_audio)."""
     s_vae, s_vaem = _sources(x, recons, recons.shape[1])
     refs = istft(extra['src_spec'])  # true sources, band-limited to 5.5 kHz like the model
+    c = extra['compression']
+    estimates = {'VAE': to_audio(s_vae, extra['mix_spec'], extra['norm'], c),
+                 'VAEM': to_audio(s_vaem, extra['mix_spec'], extra['norm'], c)}
+    if c != 1:  # without compression, VAEW is the same as VAEM
+        estimates['VAEW'] = wiener_audio(s_vae, extra['mix_spec'])
     out = {}
-    for label, est in (('VAE', s_vae), ('VAEM', s_vaem)):
-        est, _ = match_sources(
-            to_audio(est, extra['mix_spec'], extra['norm'], extra['compression']), refs)
+    for label, est in estimates.items():
+        est, _ = match_sources(est, refs)
         out[f'{label} SI-SDR'] = bss_measures(est, refs)[0].flatten()
     return out
 
@@ -165,6 +170,8 @@ def evaluate(model, args, out, device, examples=10, batch_size=64):
     loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False)
     k = args.sources
     methods = ('VAE', 'VAEM', 'IBM', 'IRM')
+    if args.compression != 1:  # Wiener masks differ from VAEM only with compression
+        methods = ('VAE', 'VAEM', 'VAEW', 'IBM', 'IRM')
     measures = {m: [] for m in methods}
     records = []
     index = 0
@@ -181,6 +188,8 @@ def evaluate(model, args, out, device, examples=10, batch_size=64):
         estimates = {'VAE': to_audio(s_vae, mix_spec, norm, c),
                      'VAEM': to_audio(s_vaem, mix_spec, norm, c),
                      'IBM': istft(ibm * phase), 'IRM': istft(irm * phase)}
+        if 'VAEW' in methods:
+            estimates['VAEW'] = wiener_audio(s_vae, mix_spec)
         for m, est in estimates.items():
             matched, order = match_sources(est, refs)
             measures[m].append(torch.stack(bss_measures(matched, refs), -1).cpu())
@@ -205,6 +214,8 @@ def evaluate(model, args, out, device, examples=10, batch_size=64):
                 for j, src in enumerate(order):
                     audio[f'vae_{j + 1}'] = estimates['VAE'][b, src].cpu().numpy()
                     audio[f'vaem_{j + 1}'] = estimates['VAEM'][b, src].cpu().numpy()
+                    if 'VAEW' in estimates:
+                        audio[f'vaew_{j + 1}'] = estimates['VAEW'][b, src].cpu().numpy()
                 rows = [('VAE', s_vae[b, order].cpu().numpy()),
                         ('VAEM', s_vaem[b, order].cpu().numpy()),
                         ('true', extra['s'][b].cpu().numpy())]
