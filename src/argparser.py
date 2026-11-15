@@ -37,7 +37,8 @@ parser.add_argument('--num-workers', type=int, default=4,
 parser.add_argument('--prior', type=str, default='gauss',
                     help='Prior over latent variables')
 parser.add_argument('--scale', type=float, default=0.5,
-                    help='Scale of Laplace likelihood')
+                    help='Scale of the Laplace prior (with --prior laplace); the likelihood\'s scale is '
+                         'fixed at sqrt(0.5)')
 parser.add_argument('--learning-rate', type=float, default=None,
                     help='Learning rate (dataset default; mnist: 2e-4, audio_synthetic: 1e-3). '
                          'With --resume, a given rate replaces the current one')
@@ -64,6 +65,13 @@ parser.add_argument('--warm-up', type=int, default=None,
 parser.add_argument('--save-interval', type=int, default=None,
                     help='How many epochs to wait before saving model (dataset default; '
                          'mnist: 1, audio_synthetic: 10)')
+parser.add_argument('--beta-cycle', type=int, default=0, metavar='N',
+                    help='Cyclical beta (Fu et al., 2019): every N epochs beta drops to 0 and '
+                         'ramps back to --beta-max over the first --beta-ramp of the cycle, '
+                         'counted from epoch 1 (0: off, the default; beta then warms up once '
+                         'over --warm-up epochs)')
+parser.add_argument('--beta-ramp', type=float, default=0.5,
+                    help='Fraction of each beta cycle spent ramping up (default: 0.5)')
 parser.add_argument('--resume', action='store_true', default=False,
                     help='Continue training from the saved model and training state (saved '
                          'next to it as <model>.train.pt); raise --epochs to train longer')

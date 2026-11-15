@@ -107,8 +107,14 @@ def log_header():
     log_line('model: {}, {} sources, latent {} per source, hidden {}, {:.1f} M parameters'.format(
         'VAE' if args.variational else 'AE', args.sources, args.dimz,
         ' '.join(map(str, args.hidden)), sum(p.numel() for p in model.parameters()) / 1e6))
-    log_line('objective: Laplace likelihood (scale {:g}) + beta * KL to the {} prior, beta 0 to '
-             '{:g} over {} epochs'.format(args.scale, args.prior, args.beta_max, args.warm_up))
+    prior = 'Laplace prior (scale {:g})'.format(args.scale) if args.prior == 'laplace' else 'Gaussian prior'
+    if args.beta_cycle > 0:
+        warm = 'cycling: 0 to {:g} over the first {:g} of every {} epochs'.format(
+            args.beta_max, args.beta_ramp, args.beta_cycle)
+    else:
+        warm = '0 to {:g} over {} epochs'.format(args.beta_max, args.warm_up)
+    log_line('objective: Laplace likelihood (scale {:.3g}) + beta * KL to the {}, beta {}'.format(
+        math.sqrt(0.5), prior, warm))
     if args.scheduler == 'cosine':
         schedule = 'cosine to {:g} at epoch {}'.format(args.min_lr, args.epochs)
     else:
@@ -346,7 +352,11 @@ if __name__ == '__main__':
             log_line('Learning rate set to {:g}'.format(lr))
 
     for epoch in range(start, args.epochs+1):
-        beta = min(1.0,(epoch)/min(args.epochs,args.warm_up)) * args.beta_max
+        if args.beta_cycle > 0:  # cyclical: back to 0 at the start of every cycle
+            t = (epoch - 1) % args.beta_cycle + 1
+            beta = min(1.0, t / max(1.0, args.beta_ramp * args.beta_cycle)) * args.beta_max
+        else:
+            beta = min(1.0,(epoch)/min(args.epochs,args.warm_up)) * args.beta_max
         started = time.time()
 
         losses["train"][epoch-1] = train(epoch)
