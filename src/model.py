@@ -23,7 +23,8 @@ class LinearBlock(nn.Module):
         return self.block(x)
 
 class VAE(nn.Module):
-    def __init__(self, dimx, dimz, n_sources=1,device='cpu',variational=True):
+    def __init__(self, dimx, dimz, n_sources=1,device='cpu',variational=True,
+                 hidden=(700, 600, 500, 400, 300)):
         super(VAE, self).__init__()
 
         self.dimx = dimx
@@ -32,7 +33,10 @@ class VAE(nn.Module):
         self.device = device
         self.variational = variational
 
-        chans = (700, 600, 500, 400, 300)
+        # Hidden units of the five encoder layers (Table I of the paper); the decoder
+        # uses them in reverse. MNIST: (700, 600, 500, 400, 300). Spectrograms (MUMS and
+        # the synthetic notes): (2560, 2048, 1536, 1024, 512).
+        chans = tuple(hidden)
 
         self.out_z = nn.Linear(chans[-1],2*self.n_sources*self.dimz)
         self.out_w = nn.Linear(chans[-1],self.n_sources)
