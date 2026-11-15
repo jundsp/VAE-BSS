@@ -71,10 +71,12 @@ parser.add_argument('--compression', type=float, default=None, metavar='C',
                     help='Spectrogram magnitude compression |STFT|**C, as in the dissertation\'s '
                          'DVAE (audio only; dataset default: 0.5; 1 for none, as in the paper)')
 parser.add_argument('--plot-interval', type=int, default=None,
-                    help='How many epochs to wait before saving a figure of test separations '
+                    help='How many epochs to wait before saving a figure of separations of the '
+                         'monitored set (audio: validation, MNIST: test) '
                          '(dataset default; mnist: 1, audio_synthetic: 10)')
 parser.add_argument('--eval-interval', type=int, default=None,
-                    help='How many epochs to wait before scoring the test set, 0 for never '
+                    help='How many epochs to wait before scoring the monitored set (audio: '
+                         'validation, MNIST: test), 0 for never '
                          '(dataset default; mnist: 0, audio_synthetic: 10)')
 
 

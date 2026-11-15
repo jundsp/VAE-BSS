@@ -1,8 +1,9 @@
 """Mixed pairs of synthetic notes as fixed-size magnitude spectrograms (paper, Sec. V-A;
 dissertation, Sec. 6.2.6), for train.py and evaluate.py.
 
-The notes come from synthetic_notes.py. Any folder of 44.1 kHz notes with train/ and test/
-subfolders (e.g. MUMS, as in the paper) works with ``--data-directory``. The interface shared
+The notes come from synthetic_notes.py. Any folder of 44.1 kHz notes with train/, valid/ and
+test/ subfolders (e.g. MUMS, as in the paper) works with ``--data-directory``. Training is
+followed on the validation notes; evaluate.py scores the test notes. The interface shared
 by all datasets is described in src/datasets/__init__.py.
 """
 
@@ -23,13 +24,14 @@ from .notes import NotePairs, get_loaders
 
 name = 'audio_synthetic'
 dimx = DIMX  # 256 bins x 128 frames
+monitor = 'validation'  # the notes scored while training (MNIST: its test set)
 
 # Settings of the paper's spectrogram experiment.
 defaults = dict(
     data_directory='data/audio_synthetic',
     dimz=64,
-    # Half the paper's hidden units (2560, 2048, 1536, 1024, 512), which gives 85 M instead
-    # of 190 M parameters: most are in the first encoder and last decoder layers. Use
+    # Half the paper's hidden units (2560, 2048, 1536, 1024, 512), which gives 89 M instead
+    # of 189 M parameters: most are in the first encoder and last decoder layers. Use
     # --hidden 2560 2048 1536 1024 512 for the paper's size.
     hidden=[1280, 1024, 768, 512, 256],
     batch_size=128,
@@ -42,7 +44,7 @@ defaults = dict(
     epochs=1000,       # the paper trained until the loss converged, about 5000 epochs
     save_interval=10,
     plot_interval=10,
-    eval_interval=10,  # median test SI-SDR of VAE and VAEM
+    eval_interval=10,  # median validation SI-SDR of VAE, VAEM and VAEW
     compression=0.5,   # |STFT|**c as in the dissertation's DVAE; the paper's VAE used none (1)
 )
 use_mps = True         # Apple-silicon GPUs help with this large model

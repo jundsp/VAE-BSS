@@ -3,8 +3,8 @@ mono .wav notes, such as MUMS).
 
 As in the paper, sources are mixed at random: every epoch pairs each training note with a new
 random partner, so the number of distinct mixtures grows with the square of the number of
-notes. The test pairs are fixed by a seed, so test scores are comparable between runs.
-Training and test notes are never mixed with one another.
+notes. Validation and test pairs are fixed by a seed, so their scores are comparable between
+runs. Notes of different splits are never mixed with one another.
 """
 
 from pathlib import Path
@@ -87,10 +87,16 @@ class PairSampler(torch.utils.data.Sampler):
 
 
 def get_loaders(directory, batch_size, kwargs, seed=0, train_seed=1):
-    """Training loader (random pairs, ``train_seed``) on ``directory/train`` and test loader
-    (pairs fixed by ``seed``) on ``directory/test``."""
+    """Training loader (random pairs, ``train_seed``) on ``directory/train`` and validation
+    loader (pairs fixed by ``seed``) on ``directory/valid``, to follow training. The test notes
+    (``directory/test``) are left for evaluate.py."""
     train_set = NotePairs(Path(directory) / "train")
-    test_set = NotePairs(Path(directory) / "test", fixed=True, seed=seed)
+    if not (Path(directory) / "valid").is_dir():
+        raise FileNotFoundError(
+            f"no validation notes in {Path(directory) / 'valid'}; run "
+            "`python -m src.datasets.synthetic_notes` (or, for your own notes, move some "
+            "training notes there)")
+    test_set = NotePairs(Path(directory) / "valid", fixed=True, seed=seed)
     train_loader = torch.utils.data.DataLoader(
         train_set, batch_size=batch_size, sampler=PairSampler(len(train_set), train_seed),
         drop_last=True, **kwargs)

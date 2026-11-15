@@ -13,11 +13,15 @@ of about 1.5 s) are defined at 44.1 kHz. The generator is otherwise identical, s
 have the same distribution but are not sample-for-sample the DVAE-BSS ones.
 
 Nothing is stored in the repository: this module regenerates the same notes from the seed, as
-``<root>/<split>/<family>/<midi>_<family>_<index>.wav``, split 80 % / 20 % into training and
-test notes like MUMS in the paper:
+``<root>/<split>/<family>/<midi>_<family>_<index>.wav``, in three splits of different notes:
+training (3000 notes), validation (750, scored while training and used to choose settings)
+and test (750, used only by evaluate.py for the reported results):
 
-    python -m src.datasets.synthetic_notes                    # data/audio_synthetic/{train,test}
-    python -m src.datasets.synthetic_notes --train 300 --test 100 -o data/audio_synthetic_small
+    python -m src.datasets.synthetic_notes                    # data/audio_synthetic/{train,valid,test}
+    python -m src.datasets.synthetic_notes --train 300 --valid 100 --test 100 -o data/audio_synthetic_small
+
+Each split has its own seed (training: 10 * seed, validation: 10 * seed + 1, test: 10 * seed
++ 2), so changing the size of one split leaves the notes of the others unchanged.
 """
 
 import argparse
@@ -180,10 +184,12 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("-o", "--out", type=Path, default=Path("data/audio_synthetic"))
     parser.add_argument("--train", type=int, default=3000, help="training notes (default: 3000)")
+    parser.add_argument("--valid", type=int, default=750, help="validation notes (default: 750)")
     parser.add_argument("--test", type=int, default=750, help="test notes (default: 750)")
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args(argv)
-    for offset, (split, count) in enumerate((("train", args.train), ("test", args.test))):
+    splits = (("train", args.train), ("valid", args.valid), ("test", args.test))
+    for offset, (split, count) in enumerate(splits):
         write_notes(args.out / split, count, seed=args.seed * 10 + offset)
         print(f"wrote {count} notes to {args.out / split}")
 
