@@ -39,7 +39,7 @@ parser.add_argument('--prior', type=str, default='gauss',
 parser.add_argument('--scale', type=float, default=0.5,
                     help='Scale of Laplace likelihood')
 parser.add_argument('--learning-rate', type=float, default=None,
-                    help='Learning rate (dataset default; mnist: 2e-4, audio_synthetic: 1e-4)')
+                    help='Learning rate (dataset default; mnist: 2e-4, audio_synthetic: 1e-3)')
 parser.add_argument('--variational', type=str, default=True,
                     help='VAE if True, AE if False.')
 parser.add_argument('--decay', type=float, default=None,
@@ -60,7 +60,7 @@ parser.add_argument('--resume', action='store_true', default=False,
                          'next to it as <model>.train.pt); raise --epochs to train longer')
 parser.add_argument('--compression', type=float, default=None, metavar='C',
                     help='Spectrogram magnitude compression |STFT|**C, as in the dissertation\'s '
-                         'DVAE (audio only; dataset default: 1, no compression, as in the paper)')
+                         'DVAE (audio only; dataset default: 0.5; 1 for none, as in the paper)')
 parser.add_argument('--plot-interval', type=int, default=None,
                     help='How many epochs to wait before saving a figure of test separations '
                          '(dataset default; mnist: 1, audio_synthetic: 10)')

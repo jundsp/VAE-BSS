@@ -41,22 +41,29 @@ The audio version separates mixtures of two musical notes from their spectrogram
 
 ```bash
 python -m src.datasets.synthetic_notes      # 3000 training + 750 test notes in data/audio_synthetic (420 MB, ~1 min)
-python train.py --dataset audio_synthetic          # the paper's settings
-python evaluate.py --checkpoint saves/audio_synthetic_vae_K2.pt
+python train.py --dataset audio_synthetic    # see the settings below
+python evaluate.py --checkpoint saves/audio_synthetic_c0.5_vae_K2.pt
 ```
 
-Processing follows the paper:
+Processing follows the paper, with the two exceptions listed after:
 
 * notes at 44.1 kHz; 2048-point STFT, Hann window, hop of 512 samples;
 * the first 256 frequency bins (up to 5.5 kHz) and the first 128 frames (about 1.5 s) of each note;
 * two notes picked at random are mixed (complex STFTs added), anew every epoch; the mixture's magnitude spectrogram is normalized to 0-1 and flattened into a 32768-dimensional input;
 * a 64-dimensional latent variable per source, sigmoid outputs; Laplace likelihood with scale √0.5 and Gaussian prior; the paper's encoder layers have 2560, 2048, 1536, 1024 and 512 units, but the default here is half of each (85 M instead of 190 M parameters, almost all in the first encoder and last decoder layers); use `--hidden 2560 2048 1536 1024 512` for the paper's size;
-* Adam, batch of 128 mixtures, learning rate 1e-4 decayed by 0.01 % per epoch, β rising from 0 to 0.5 over the first 100 epochs;
+* Adam, batch of 128 mixtures, learning rate decayed by 0.01 % per epoch, β rising from 0 to 0.5 over the first 100 epochs;
 * separated audio is synthesized from each estimated magnitude with the mixture's phase and the inverse STFT.
 
-`--compression 0.5` compresses the magnitudes to |STFT|^0.5 before the 0-1 normalization, as the dissertation does for the DVAE (Section 6.3.7); the model, its masks (VAEM) and its loss then work in the compressed domain, and synthesis undoes the compression before the inverse STFT. The paper's VAE uses no compression (the default). The setting is saved next to the model (`saves/<name>.json`) for `evaluate.py`, and runs with compression are named `audio_synthetic_c0.5_...`. With compression, the masked sources (VAEM) no longer add up to the mixture after decompression (the masks become m^(1/c)), so `evaluate.py` also reports VAEW: the ratio masks from the compressed estimates applied to the uncompressed mixture STFT, a generalized Wiener filter (Liutkus and Badeau, 2015) whose sources add up exactly to the mixture.
+Two defaults differ from the paper, because the paper's settings did not separate these notes within 300 epochs:
 
-Training saves the model to `saves/audio_synthetic_vae_K2.pt` and, every 10 epochs, to `results/audio_synthetic_vae_K2/`: `reconstruction_<epoch>.png` (test mixtures, reconstruction, separated and true spectrograms), `progress.png` (losses and median test SI-SDR of VAE and VAEM), `losses.png` and `log.csv`. `evaluate.py` reports median SI-SDR, SIR and SAR over the test sources for the VAE, the VAE with masking (VAEM) and the ideal binary and ratio masks (upper bounds), like Table III, and saves .wav examples. SIR and SAR are the scale-invariant versions (Le Roux et al., 2019) rather than bss_eval's, so only SI-SDR is directly comparable to the paper. The paper's MUMS results are not reproduced here: the data differ.
+* learning rate 1e-3 (the paper: 1e-4, `--learning-rate 1e-4`);
+* magnitudes compressed to |STFT|^0.5 before the 0-1 normalization, as the dissertation does for the DVAE (Section 6.3.7); the model, its masks (VAEM) and its loss then work in the compressed domain, and synthesis undoes the compression before the inverse STFT. The paper's VAE uses no compression (`--compression 1`).
+
+After 300 epochs (median test SI-SDR of VAEM): 0.9 dB with the paper's settings (stopped at epoch 120, no separation), 5.3 dB with learning rate 1e-3, and 11.3 dB with learning rate 1e-3 and compression 0.5 (VAE 6.9, VAEW 11.2, IBM 22.5, IRM 21.2 dB).
+
+The compression is saved next to the model (`saves/<name>.json`) for `evaluate.py`, and runs are named after it, e.g. `audio_synthetic_c0.5_vae_K2` (no `c` part without compression). With compression, the masked sources (VAEM) no longer add up to the mixture after decompression (the masks become m^(1/c)), so `evaluate.py` also reports VAEW: the ratio masks from the compressed estimates applied to the uncompressed mixture STFT, a generalized Wiener filter (Liutkus and Badeau, 2015) whose sources add up exactly to the mixture.
+
+Training saves the model to `saves/audio_synthetic_c0.5_vae_K2.pt` and, every 10 epochs, to `results/audio_synthetic_c0.5_vae_K2/`: `reconstruction_<epoch>.png` (test mixtures, reconstruction, separated and true spectrograms), `progress.png` (losses and median test SI-SDR of VAE, VAEM and VAEW), `losses.png` and `log.csv`. `evaluate.py` reports median SI-SDR, SIR and SAR over the test sources for the VAE, the VAE with masking (VAEM), the Wiener-filtered VAE (VAEW) and the ideal binary and ratio masks (upper bounds), like Table III, and saves .wav examples. SIR and SAR are the scale-invariant versions (Le Roux et al., 2019) rather than bss_eval's, so only SI-SDR is directly comparable to the paper. The paper's MUMS results are not reproduced here: the data differ.
 
 The default model has about 85 M parameters (a 0.34 GB checkpoint), so a GPU is recommended; Apple-silicon GPUs (MPS) are used when available. To train on your own notes (e.g. MUMS), put mono 44.1 kHz .wav files under `train/` and `test/` in one folder and pass it with `--data-directory`.
 

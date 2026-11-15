@@ -33,7 +33,7 @@ defaults = dict(
     # --hidden 2560 2048 1536 1024 512 for the paper's size.
     hidden=[1280, 1024, 768, 512, 256],
     batch_size=128,
-    learning_rate=1e-4,
+    learning_rate=1e-3,  # the paper used 1e-4 on MUMS; here 1e-4 stalls (no separation)
     decay=0.9999,      # 0.01 % per epoch
     beta_max=0.5,
     warm_up=100,       # epochs for beta to grow from 0 to 0.5
@@ -41,7 +41,7 @@ defaults = dict(
     save_interval=10,
     plot_interval=10,
     eval_interval=10,  # median test SI-SDR of VAE and VAEM
-    compression=1.0,   # |STFT|**c; the paper's VAE uses none, the dissertation's DVAE c = 0.5
+    compression=0.5,   # |STFT|**c as in the dissertation's DVAE; the paper's VAE used none (1)
 )
 use_mps = True         # Apple-silicon GPUs help with this large model
 # Settings that change the processing, so evaluate.py needs them: saved next to the model.
