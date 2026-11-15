@@ -31,7 +31,7 @@ parser.add_argument('--dimz', type=int, default=None,
 parser.add_argument('--hidden', type=int, nargs=5, default=None, metavar='N',
                     help='Hidden units of the five encoder layers, reversed in the decoder '
                          '(dataset default; mnist: 700 600 500 400 300, synthetic: '
-                         '2560 2048 1536 1024 512)')
+                         '1280 1024 768 512 256, half of the paper\'s 2560 2048 1536 1024 512)')
 parser.add_argument('--num-workers', type=int, default=4,
                     help='Number of data loading workers (parallel).')
 parser.add_argument('--prior', type=str, default='gauss',

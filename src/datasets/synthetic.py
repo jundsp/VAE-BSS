@@ -28,7 +28,10 @@ dimx = DIMX  # 256 bins x 128 frames
 defaults = dict(
     data_directory='data/synthetic',
     dimz=64,
-    hidden=[2560, 2048, 1536, 1024, 512],
+    # Half the paper's hidden units (2560, 2048, 1536, 1024, 512), which gives 85 M instead
+    # of 190 M parameters: most are in the first encoder and last decoder layers. Use
+    # --hidden 2560 2048 1536 1024 512 for the paper's size.
+    hidden=[1280, 1024, 768, 512, 256],
     batch_size=128,
     learning_rate=1e-4,
     decay=0.9999,      # 0.01 % per epoch

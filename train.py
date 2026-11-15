@@ -114,6 +114,26 @@ def plot_losses(losses, epochs):
 	plt.close()
 
 
+def plot_progress(rows):
+    """Losses (log scale) and median test scores per epoch, for datasets scored in training."""
+    base = ('epoch', 'beta', 'lr', 'train_loss', 'test_loss')
+    keys = list(dict.fromkeys(k for r in rows for k in r if k not in base))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 4))
+    epochs = [r['epoch'] for r in rows]
+    ax1.semilogy(epochs, [r['train_loss'] for r in rows], label='Train')
+    ax1.semilogy(epochs, [r['test_loss'] for r in rows], label='Test')
+    ax1.set_xlabel('Epoch'), ax1.set_ylabel('Loss per mixture'), ax1.legend()
+    for key in keys:
+        points = [(r['epoch'], r[key]) for r in rows if key in r]
+        ax2.plot(*zip(*points), 'o-', label=key)
+    ax2.set_xlabel('Epoch'), ax2.set_ylabel('Median test score (dB)'), ax2.grid(alpha=0.3)
+    if keys:
+        ax2.legend()
+    fig.tight_layout()
+    fig.savefig(os.path.join(results, 'progress.png'))
+    plt.close(fig)
+
+
 def write_log(rows):
     fields = list(dict.fromkeys(k for r in rows for k in r))
     with open(os.path.join(results, 'log.csv'), 'w', newline='') as f:
@@ -164,6 +184,8 @@ if __name__ == '__main__':
                 torch.save(model.state_dict(), checkpoint)
                 write_log(log)
                 plot_losses(losses, epoch)
+                if args.eval_interval > 0:
+                    plot_progress(log)
 
 
     plot_losses(losses, args.epochs)
