@@ -144,8 +144,10 @@ def _write_wav(path, wave, peak):
     wavfile.write(path, SAMPLE_RATE, np.round(32767 * wave / peak).astype(np.int16))
 
 
-def _save_example(folder, names, mixture, rows, audio, compression=1.0):
-    """Spectrograms and .wav files of one test mixture."""
+def _save_example(folder, names, left, rows, audio, compression=1.0):
+    """Spectrograms and .wav files of one test mixture. ``left`` holds the ``(title, spectrogram)``
+    shown at the start of each row (the mixture next to the true notes, the reconstruction next to
+    the VAE sources), ``rows`` the ``(label, spectrograms)`` of each row."""
     os.makedirs(folder, exist_ok=True)
     peak = max(1e-9, max(float(np.abs(w).max()) for w in audio.values()))
     for label, wave in audio.items():
@@ -157,7 +159,8 @@ def _save_example(folder, names, mixture, rows, audio, compression=1.0):
                              squeeze=False)
     for ax in axes.flat:
         ax.axis('off')
-    _show(axes[0, 0], mixture, 'mixture', compression)
+    for r, (title, spec) in enumerate(left):
+        _show(axes[r, 0], spec, title, compression)
     for r, (label, specs) in enumerate(rows):
         for j, spec in enumerate(specs):
             _show(axes[r, j + 1], spec, f'{label} {j + 1}', compression)
@@ -182,7 +185,7 @@ def evaluate(model, args, out, device, examples=10, batch_size=64):
     for batch in loader:
         x, extra = prepare(batch, device, args)
         mix_spec, src_spec, norm = extra['mix_spec'], extra['src_spec'], extra['norm']
-        recons = model(x)[3]
+        recon_x, _, _, recons = model(x)
         s_vae, s_vaem = _sources(x, recons, k)
         ibm, irm = ideal_masks(src_spec, mix_spec)
         phase = torch.exp(1j * torch.angle(mix_spec)).unsqueeze(1)
@@ -220,11 +223,15 @@ def evaluate(model, args, out, device, examples=10, batch_size=64):
                     audio[f'vaem_{j + 1}'] = estimates['VAEM'][b, src].cpu().numpy()
                     if 'VAEW' in estimates:
                         audio[f'vaew_{j + 1}'] = estimates['VAEW'][b, src].cpu().numpy()
-                rows = [('VAE', s_vae[b, order].cpu().numpy()),
-                        ('VAEM', s_vaem[b, order].cpu().numpy()),
-                        ('true', extra['s'][b].cpu().numpy())]
+                # Laid out like the training figures in the README: the mixture and the true
+                # notes, then the reconstruction and the VAE sources, then the VAEM sources.
+                rows = [('true', extra['s'][b].cpu().numpy()),
+                        ('VAE', s_vae[b, order].cpu().numpy()),
+                        ('VAEM', s_vaem[b, order].cpu().numpy())]
+                left = [('mixture', x[b].view(N_BINS, N_FRAMES).cpu().numpy()),
+                        ('reconstruction', recon_x[b].view(N_BINS, N_FRAMES).cpu().numpy())]
                 _save_example(os.path.join(out, f'example_{index + 1:02d}'), names,
-                              x[b].cpu().numpy(), rows, audio, args.compression)
+                              left, rows, audio, args.compression)
             index += 1
 
     with open(os.path.join(out, 'scores.csv'), 'w') as f:
