@@ -35,6 +35,15 @@ Results for K = 2, 3, 4 assumed model sources are saved in the results directory
 
 Either program will first download the MNIST data and prepare it as training and testing datasets. The datasets are saved in a directory that will be recalled for subsequent use.
 
+<img src="docs/imgs/MNIST_K3_25.png" alt="MNIST K=3" title="MNIST K=3" width="600" />
+
+### Code layout
+
+* `train.py`, `evaluate.py`: shared by all datasets.
+* `src/model.py`: the VAE and its loss; `src/utils.py`: MNIST mixing, KL divergences, masks, permutation.
+* `src/processing.py`: STFT processing of the audio version; `src/metrics.py`: SI-SDR, SIR, SAR.
+* `src/datasets/`: one module per dataset (`mnist.py`, `audio_synthetic.py`) with its loaders, mixing, default settings, scores and figures; `notes.py` loads pairs of notes; `synthetic_notes.py` generates the notes.
+
 ### Audio
 
 The audio version separates mixtures of two musical notes from their spectrograms, as in the paper's MUMS experiment (Section V and Table III; Section 6.2.6 of the [dissertation](https://hdl.handle.net/20.500.14905/94099)). MUMS is licensed, so this repository trains on the synthetic notes of [DVAE-BSS](https://github.com/jundsp/DVAE-BSS) instead: plucked and bowed strings, reeds, brass, bells and organs with random pitch, timbre, vibrato and decay. There is no pretrained audio model.
@@ -45,9 +54,13 @@ python train.py --dataset audio_synthetic    # 1000 epochs, about an hour on an 
 python evaluate.py --checkpoint saves/audio_synthetic_c0.5_vae_K2.pt
 ```
 
-<img src="docs/imgs/audio_training.gif" alt="Separation of synthetic note mixtures over training" title="Separation of synthetic note mixtures over training" width="800" />
+Training, epochs 10 to 1000, on two validation mixtures: the mixture, the model's reconstruction, its two decoded sources (VAE), the mask-based sources (VAEM) and the true notes.
 
-Training, epochs 10 to 1000: four validation mixtures (rows), each with the mixture, the model's reconstruction, its two decoded sources (VAE), the mask-based sources (VAEM) and the true notes. Made with `python -m src.animate results/audio_synthetic_c0.5_vae_K2 -o docs/imgs/audio_training.gif`.
+<img src="docs/imgs/audio_training_row2.gif" alt="Separation of a synthetic note mixture over training" title="Separation of a synthetic note mixture over training" width="800" />
+
+<img src="docs/imgs/audio_training_row4.gif" alt="Separation of a second synthetic note mixture over training" title="Separation of a second synthetic note mixture over training" width="800" />
+
+Made from the training figures with `python -m src.animate results/audio_synthetic_c0.5_vae_K2 --rows 2 --wrap 4 --width 800 -o docs/imgs/audio_training_row2.gif` (and `--rows 4` for the second).
 
 | 1000 epochs, test set (dB) | VAE | VAEM | VAEW | IBM | IRM |
 |---|---|---|---|---|---|
@@ -59,13 +72,19 @@ Medians over the 750 held-out test notes (375 fixed mixtures), which played no p
 
 This audio model is a small proof of concept, a half-size network trained on 3000 synthetic notes, so its separations are not perfect: some notes keep traces of the other or lose part of their own sound.
 
-Listen to three test mixtures (the model's mask-based separations, VAEM, next to the true notes; each folder also has `spectrograms.png`):
+Listen to three test mixtures: the model's mask-based separations (VAEM) next to the true notes.
 
-| Test mixture | Mixture | Separated | True notes | VAEM SI-SDR (dB) |
-|---|---|---|---|---|
-| brass + plucked string | [mixture](docs/audio/example_1/mixture.wav) | [1](docs/audio/example_1/vaem_1.wav), [2](docs/audio/example_1/vaem_2.wav) | [1](docs/audio/example_1/true_1.wav), [2](docs/audio/example_1/true_2.wav) | 26.8, 16.4 |
-| two bells | [mixture](docs/audio/example_2/mixture.wav) | [1](docs/audio/example_2/vaem_1.wav), [2](docs/audio/example_2/vaem_2.wav) | [1](docs/audio/example_2/true_1.wav), [2](docs/audio/example_2/true_2.wav) | 8.2, 4.9 |
-| two reeds | [mixture](docs/audio/example_3/mixture.wav) | [1](docs/audio/example_3/vaem_1.wav), [2](docs/audio/example_3/vaem_2.wav) | [1](docs/audio/example_3/true_1.wav), [2](docs/audio/example_3/true_2.wav) | 29.6, 32.8 |
+**Brass + plucked string** (VAEM SI-SDR 26.8, 16.4 dB): [mixture](docs/audio/example_1/mixture.wav) · separated [1](docs/audio/example_1/vaem_1.wav), [2](docs/audio/example_1/vaem_2.wav) · true [1](docs/audio/example_1/true_1.wav), [2](docs/audio/example_1/true_2.wav)
+
+<img src="docs/audio/example_1/spectrograms.png" alt="Spectrograms of test mixture 1: brass + plucked string" title="brass + plucked string" width="500" />
+
+**Two bells** (VAEM SI-SDR 8.2, 4.9 dB): [mixture](docs/audio/example_2/mixture.wav) · separated [1](docs/audio/example_2/vaem_1.wav), [2](docs/audio/example_2/vaem_2.wav) · true [1](docs/audio/example_2/true_1.wav), [2](docs/audio/example_2/true_2.wav)
+
+<img src="docs/audio/example_2/spectrograms.png" alt="Spectrograms of test mixture 2: two bells" title="two bells" width="500" />
+
+**Two reeds** (VAEM SI-SDR 29.6, 32.8 dB): [mixture](docs/audio/example_3/mixture.wav) · separated [1](docs/audio/example_3/vaem_1.wav), [2](docs/audio/example_3/vaem_2.wav) · true [1](docs/audio/example_3/true_1.wav), [2](docs/audio/example_3/true_2.wav)
+
+<img src="docs/audio/example_3/spectrograms.png" alt="Spectrograms of test mixture 3: two reeds" title="two reeds" width="500" />
 
 The two bells are a hard case. Over the whole test set, the median VAEM SI-SDR per family ranges from 10.0 dB (organs) and 12.2 dB (plucked strings) to 19.6 dB (reeds).
 
@@ -93,12 +112,3 @@ The compression is saved next to the model (`saves/<name>.json`) for `evaluate.p
 Training saves the model to `saves/audio_synthetic_c0.5_vae_K2.pt` and, every 10 epochs, to `results/audio_synthetic_c0.5_vae_K2/`: `reconstruction_<epoch>.png` (validation mixtures, reconstruction, separated and true spectrograms), `progress.png` (losses and median validation SI-SDR of VAE, VAEM and VAEW), `losses.png` and `log.csv`. `evaluate.py` reports median SI-SDR, SIR and SAR over the test sources for the VAE, the VAE with masking (VAEM), the Wiener-filtered VAE (VAEW) and the ideal binary and ratio masks (upper bounds), like Table III, and saves .wav examples. SIR and SAR are the scale-invariant versions (Le Roux et al., 2019) rather than bss_eval's, so only SI-SDR is directly comparable to the paper. The paper's MUMS results are not reproduced here: the data differ.
 
 The default model has about 89 M parameters (a 0.36 GB checkpoint), so a GPU is recommended; Apple-silicon GPUs (MPS) are used when available. To train on your own notes (e.g. MUMS), put mono 44.1 kHz .wav files under `train/`, `valid/` and `test/` in one folder and pass it with `--data-directory`.
-
-### Code layout
-
-* `train.py`, `evaluate.py`: shared by all datasets.
-* `src/model.py`: the VAE and its loss; `src/utils.py`: MNIST mixing, KL divergences, masks, permutation.
-* `src/processing.py`: STFT processing of the audio version; `src/metrics.py`: SI-SDR, SIR, SAR.
-* `src/datasets/`: one module per dataset (`mnist.py`, `audio_synthetic.py`) with its loaders, mixing, default settings, scores and figures; `notes.py` loads pairs of notes; `synthetic_notes.py` generates the notes.
-
-<img src="docs/imgs/MNIST_K3_25.png" alt="MNIST K=3" title="MNIST K=3" width="600" />
