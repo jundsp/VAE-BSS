@@ -54,13 +54,13 @@ python train.py --dataset audio_synthetic    # 1000 epochs, about an hour on an 
 python evaluate.py --checkpoint saves/audio_synthetic_c0.5_vae_K2.pt
 ```
 
-Training, epochs 10 to 1000, on two validation mixtures: the mixture, the model's reconstruction, its two decoded sources (VAE), the mask-based sources (VAEM) and the true notes.
+Training, epochs 10 to 1000, on two validation mixtures: the mixture and the true notes (top), the model's reconstruction of the mixture and its two decoded sources (VAE, middle), and its mask-based sources (VAEM, bottom).
 
-<img src="docs/imgs/audio_training_row2.gif" alt="Separation of a synthetic note mixture over training" title="Separation of a synthetic note mixture over training" width="800" />
+<img src="docs/imgs/audio_training_row2.gif" alt="Separation of a synthetic note mixture over training" title="Separation of a synthetic note mixture over training" width="600" />
 
-<img src="docs/imgs/audio_training_row4.gif" alt="Separation of a second synthetic note mixture over training" title="Separation of a second synthetic note mixture over training" width="800" />
+<img src="docs/imgs/audio_training_row4.gif" alt="Separation of a second synthetic note mixture over training" title="Separation of a second synthetic note mixture over training" width="600" />
 
-Made from the training figures with `python -m src.animate results/audio_synthetic_c0.5_vae_K2 --rows 2 --wrap 4 --width 800 -o docs/imgs/audio_training_row2.gif` (and `--rows 4` for the second).
+Made from the training figures with `python -m src.animate results/audio_synthetic_c0.5_vae_K2 --rows 2 --layout "1 7 8 / 2 3 4 / - 5 6" --width 600 -o docs/imgs/audio_training_row2.gif` (and `--rows 4` for the second).
 
 | 1000 epochs, test set (dB) | VAE | VAEM | VAEW | IBM | IRM |
 |---|---|---|---|---|---|

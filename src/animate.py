@@ -5,8 +5,10 @@
 Early epochs change the most, so every figure up to ``--dense-until`` is used and only every
 ``--step``-th epoch after it. Each frame is resized to ``--width`` pixels, labelled with its
 epoch above the figure, and the last frame is held for ``--hold`` seconds. ``--rows 2 4`` keeps
-only those rows of panels (counted from 1, below the column titles), and ``--wrap 4`` lays out
-each kept row's panels four per line, so a narrow frame still shows them large.
+only those rows of panels (counted from 1, below the column titles), and ``--layout`` rearranges
+each kept row's panels, by column number (from 1; ``-`` leaves a gap, ``/`` starts a new line), e.g.
+``--layout "1 7 8 / 2 3 4 / - 5 6"`` for the mixture and true notes above the VAE and VAEM
+estimates.
 """
 
 import argparse
@@ -76,25 +78,36 @@ def centre(image, width):
     return out
 
 
-def select_rows(image, rows, wrap=None):
-    """The column titles and only the panel ``rows`` (from 1). With ``wrap``, each row's panels
-    (each under its title) are laid out ``wrap`` per line instead, so they can be shown larger."""
+def parse_layout(text):
+    """``"1 7 8 / - 3 4"`` -> ``[[1, 7, 8], [None, 3, 4]]``: column numbers, ``None`` for a gap."""
+    return [[None if c == '-' else int(c) for c in line.split()] for line in text.split('/')]
+
+
+def select_rows(image, rows, layout=None):
+    """The column titles and only the panel ``rows`` (from 1). With ``layout`` (lines of column
+    numbers, ``None`` for a gap), each row's panels, each under its title, are rearranged into
+    those lines instead, so they can be shown larger."""
     y = cuts(bands(image), image.height)
     if max(rows) > len(y) - 2:
         raise SystemExit(f'the figure has {len(y) - 2} rows of panels, not {max(rows)}')
     titles = image.crop((0, 0, image.width, y[1]))
     picked = [image.crop((0, y[r], image.width, y[r + 1])) for r in rows]
-    if not wrap:
+    if not layout:
         return stack([titles] + picked)
     # Columns found from all panels, so every row (and every epoch) is cut the same way.
     x = cuts(bands(image.crop((0, y[1], image.width, image.height)), 'columns'), image.width)
+    used = [c for line in layout for c in line if c is not None]
+    if max(used) > len(x) - 1 or min(used) < 1:
+        raise SystemExit(f'the figure has {len(x) - 1} columns of panels (1-{len(x) - 1})')
     grids = []
     for row in picked:
         cells = [stack([titles.crop((a, 0, b, titles.height)), row.crop((a, 0, b, row.height))])
                  for a, b in zip(x, x[1:])]
-        cells = [centre(cell, max(c.width for c in cells)) for cell in cells]
-        grids.append(stack([stack(cells[i:i + wrap], vertical=False)
-                            for i in range(0, len(cells), wrap)]))
+        width = max(c.width for c in cells)
+        cells = [centre(cell, width) for cell in cells]
+        gap = Image.new('RGB', cells[0].size, 'white')
+        grids.append(stack([stack([gap if c is None else cells[c - 1] for c in line],
+                                  vertical=False) for line in layout]))
     return stack(grids)
 
 
@@ -125,15 +138,16 @@ def main(argv=None):
                         help='After that, one figure every this many epochs (default: 30)')
     parser.add_argument('--rows', type=int, nargs='+', default=None,
                         help='Keep only these rows of panels, counted from 1 (default: all)')
-    parser.add_argument('--wrap', type=int, default=None,
-                        help='Lay out each kept row this many panels per line (needs --rows)')
+    parser.add_argument('--layout', type=parse_layout, default=None,
+                        help='Rearrange each kept row\'s panels: column numbers from 1, "-" for a '
+                             'gap, "/" between lines, e.g. "1 7 8 / 2 3 4 / - 5 6" (needs --rows)')
     parser.add_argument('--fps', type=float, default=4, help='Frames per second')
     parser.add_argument('--hold', type=float, default=2.5,
                         help='Seconds to hold the last frame')
     args = parser.parse_args(argv)
 
-    if args.wrap and not args.rows:
-        parser.error('--wrap needs --rows')
+    if args.layout and not args.rows:
+        parser.error('--layout needs --rows')
     found = figures(args.run)
     if not found:
         raise SystemExit(f'no reconstruction_<epoch>.png figures in {args.run}')
@@ -141,7 +155,7 @@ def main(argv=None):
     for epoch, path in subsample(found, args.dense_until, args.step):
         image = Image.open(path).convert('RGB')
         if args.rows:
-            image = select_rows(image, args.rows, args.wrap)
+            image = select_rows(image, args.rows, args.layout)
         height = round(image.height * args.width / image.width)
         image = image.resize((args.width, height), Image.LANCZOS)
         frames.append(label(image, f'epoch {epoch}'))
