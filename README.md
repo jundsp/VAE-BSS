@@ -48,6 +48,8 @@ Either program will first download the MNIST data and prepare it as training and
 
 The audio version separates mixtures of two musical notes from their spectrograms, as in the paper's MUMS experiment (Section V and Table III; Section 6.2.6 of the [dissertation](https://hdl.handle.net/20.500.14905/94099)). MUMS is licensed, so this repository trains on the synthetic notes of [DVAE-BSS](https://github.com/jundsp/DVAE-BSS) instead: plucked and bowed strings, reeds, brass, bells and organs with random pitch, timbre, vibrato and decay. There is no pretrained audio model.
 
+This is a smaller model (half the paper's layer widths), trained on a smaller, synthetic dataset than the paper's results used, so the separations are not perfect. It is a starting point for your own project: settings and a training script that work, to build on with a larger model (`--hidden 2560 2048 1536 1024 512` is the paper's size) and your own audio (mono 44.1 kHz .wav notes under `train/`, `valid/` and `test/` in one folder, passed with `--data-directory`).
+
 ```bash
 python -m src.datasets.synthetic_notes      # 3000 training, 750 validation and 750 test notes in data/audio_synthetic (500 MB, ~1 min)
 python train.py --dataset audio_synthetic    # 1000 epochs, about an hour on an Apple-silicon GPU
@@ -67,8 +69,6 @@ Training, epochs 10 to 1000, on two validation mixtures: the mixture and the tru
 | SAR | 8.48 | 15.26 | 16.86 | 23.80 | 22.14 |
 
 Medians over 750 held-out test notes; IBM and IRM are the ideal binary and ratio masks (upper bounds). SIR and SAR are scale-invariant (Le Roux et al., 2019), so only SI-SDR compares directly with the paper.
-
-This is a smaller model (half the paper's layer widths), trained on a smaller, synthetic dataset than the paper's results used, so the separations are not perfect. It is a starting point for your own project: settings and a training script that work, to build on with a larger model (`--hidden 2560 2048 1536 1024 512` is the paper's size) and your own audio (mono 44.1 kHz .wav notes under `train/`, `valid/` and `test/` in one folder, passed with `--data-directory`).
 
 Listen to three test mixtures: the model's mask-based separations (VAEM) next to the true notes.
 
